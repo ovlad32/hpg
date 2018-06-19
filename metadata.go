@@ -28,6 +28,8 @@ type table struct {
 	cons       []*constraint
 }
 type column struct {
+	schemaName string
+	tableName  string
 	columnName string
 	typeName   string
 	position   int
@@ -59,11 +61,56 @@ type constraint struct {
 	checkExpr  string
 }
 
+type IResultSet interface {
+	Next() bool
+	Scan(...interface{}) error
+}
+
+func collectTables(rs IResultSet) (result []*table, err error) {
+	var curTab *table
+	for rs.Next() {
+		var c = new(column)
+		err = rs.Scan(
+			&c.schemaName,
+			&c.tableName,
+			&c.columnName,
+			&c.position,
+			&c.defValue,
+			&c.nullable,
+			&c.typeName,
+			&c.charLength,
+			&c.numPrec,
+			&c.numScale,
+		)
+
+		if err != nil {
+			errors.Wrap(err, "could not read H2 table metadata")
+			return
+		}
+
+		if curTab == nil || curTab.tableName != c.tableName || curTab.schemaName != c.schemaName {
+			if curTab != nil {
+				result = append(result, curTab)
+			}
+			curTab = &table{
+				schemaName: c.schemaName,
+				tableName:  c.tableName,
+			}
+		}
+		curTab.columns = append(curTab.columns, c)
+	}
+	if curTab != nil {
+		result = append(result, curTab)
+	}
+	return
+}
+
 func (h2 *db) grabMetadataTable(schemaName string) (result *schema, err error) {
 	query := `
 	SELECT 
-		C.TABLE_NAME
-		,C.COLUMN_NAME 
+        C.TABLE_SCHEMA
+        ,C.TABLE_NAME
+        ,C.COLUMN_NAME 
 		,C.ORDINAL_POSITION 
 		,C.COLUMN_DEFAULT 
 		,C.NULLABLE 
@@ -91,41 +138,9 @@ func (h2 *db) grabMetadataTable(schemaName string) (result *schema, err error) {
 		return
 	}
 	defer rs.Close()
-	var tableName, prevTable string
-	var current *table
-	for rs.Next() {
-		c := &column{}
-		err = rs.Scan(
-			&tableName,
-			&c.columnName,
-			&c.position,
-			&c.defValue,
-			&c.nullable,
-			&c.typeName,
-			&c.charLength,
-			&c.numPrec,
-			&c.numScale,
-		)
-
-		if err != nil {
-			errors.Wrapf(err, "could not read table metadata")
-			return
-		}
-		if result == nil {
-			result = &schema{
-				schemaName: schemaName,
-			}
-		}
-		if prevTable != tableName {
-			current = &table{
-				schemaName: schemaName,
-				tableName:  tableName,
-			}
-			result.tables = append(result.tables, current)
-			prevTable = tableName
-		}
-
-		current.columns = append(current.columns, c)
+	result.tables, err = collectTables(rs)
+	if err != nil {
+		return
 	}
 	return
 }
