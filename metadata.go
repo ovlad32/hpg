@@ -39,27 +39,6 @@ type column struct {
 	numScale   int
 	numPrec    int
 }
-type index struct {
-	schemaName string
-	tableName  string
-	indexName  string
-	typeName   string
-	consName   string
-	unique     bool
-	columns    []*indexColumn
-}
-type indexColumn struct {
-	columnName string
-	asc        string
-}
-type constraint struct {
-	consName   string
-	references string
-	columList  string
-	typeName   string
-	indexName  string
-	checkExpr  string
-}
 
 type IResultSet interface {
 	Next() bool
@@ -84,7 +63,6 @@ func collectTables(rs IResultSet) (result []*table, err error) {
 		)
 
 		if err != nil {
-			errors.Wrap(err, "could not read H2 table metadata")
 			return
 		}
 
@@ -105,7 +83,7 @@ func collectTables(rs IResultSet) (result []*table, err error) {
 	return
 }
 
-func (h2 *db) grabMetadataTable(schemaName string) (result *schema, err error) {
+func (h2 *db) grabTable(schemaName string) (result *schema, err error) {
 	query := `
 	SELECT 
         C.TABLE_SCHEMA
@@ -140,10 +118,39 @@ func (h2 *db) grabMetadataTable(schemaName string) (result *schema, err error) {
 	defer rs.Close()
 	result.tables, err = collectTables(rs)
 	if err != nil {
+		errors.Wrapf(err, "could not read H2 table metadata from schema %s", schemaName)
 		return
 	}
 	return
 }
+
+type constraint struct {
+	consName   string
+	references string
+	columList  string
+	typeName   string
+	indexName  string
+	checkExpr  string
+}
+
+func collectConstraints(rs IResultSet) (result []*constraint, err error) {
+	for rs.Next() {
+		var c = new(constraint)
+		err = rs.Scan(
+			&c.typeName,
+			&c.consName,
+			&c.columList,
+			&c.indexName,
+			&c.checkExpr,
+		)
+		if err != nil {
+			return
+		}
+		result = append(result, c)
+	}
+	return
+}
+
 func (h2 *db) grabConstraints(t table) (result []*constraint, err error) {
 
 	query := `
@@ -170,35 +177,75 @@ func (h2 *db) grabConstraints(t table) (result []*constraint, err error) {
 		return
 	}
 	defer rs.Close()
-	//  var prev,curr string
-	for rs.Next() {
-		c := &constraint{}
-
-		err = rs.Scan(
-			&c.typeName,
-			&c.consName,
-			&c.columList,
-			&c.indexName,
-			&c.checkExpr,
-		)
-
-		if err != nil {
-			err = errors.Wrapf(err, "could not read H2 constraint metadata for %s.%s ", t.schemaName, t.tableName)
-			return
-		}
-		result = append(result, c)
+	result, err = collectConstraints(rs)
+	if err != nil {
+		err = errors.Wrapf(err, "could not read H2 constraint metadata for %s.%s ", t.schemaName, t.tableName)
+		return
 	}
 	return
+}
+
+type index struct {
+	schemaName string
+	tableName  string
+	indexName  string
+	typeName   string
+	consName   string
+	nonUnique  bool
+	columns    []*indexColumn
+}
+type indexColumn struct {
+	columnName string
+	position   int
+	asc        string
+}
+
+func collectIndexes(rs IResultSet) (result []*index, err error) {
+	var curIndex *index
+	for rs.Next() {
+		var i = new(index)
+		var ic = new(indexColumn)
+
+		err = rs.Scan(
+			&i.schemaName,
+			&i.tableName,
+			&i.indexName,
+			&i.nonUnique,
+			&i.typeName,
+			&i.consName,
+			&ic.columnName,
+			&ic.position,
+			&ic.asc,
+		)
+		if err != nil {
+			return
+		}
+		if curIndex == nil || curIndex.indexName != i.indexName || curIndex.tableName != i.tableName || curIndex.schemaName != i.schemaName {
+			if curIndex != nil {
+				result = append(result, curIndex)
+			}
+			curIndex = i
+		}
+		curIndex.columns = append(curIndex.columns, ic)
+	}
+	if curIndex != nil {
+		result = append(result, curIndex)
+	}
+	return
+
 }
 
 func (h2 *db) grabIndexes(t table) (result []*index, err error) {
 	query := `
 	SELECT 
-		C.NON_UNIQUE
+		C.TABLE_SCHEMA
+		,C.TABLE_NAME
 		,C.INDEX_NAME
+		,C.NON_UNIQUE
 		,C.INDEX_TYPE_NAME
 		,C.CONSTRAINT_NAME
 		,C.COLUMN_NAME
+		,C.ORDINAL_POSITION
 		,C.ASC_OR_DESC
 	FROM INFORMATION_SCHEMA.INDEXES C
 		INNER JOIN  INFORMATION_SCHEMA.TABLES T
@@ -218,35 +265,11 @@ func (h2 *db) grabIndexes(t table) (result []*index, err error) {
 		return
 	}
 	defer rs.Close()
-	var curr *index
-	for rs.Next() {
-		i := &index{
-			schemaName: t.schemaName,
-			tableName:  t.tableName,
-		}
-		ic := new(indexColumn)
-		err = rs.Scan(
-			&i.unique,
-			&i.indexName,
-			&i.typeName,
-			&i.consName,
-			&ic.columnName,
-			&ic.asc,
-		)
-		if err != nil {
-			err = errors.Wrapf(err, "could not read H2 constraint metadata for %s.%s ", t.schemaName, t.tableName)
-			return
-		}
-		if curr == nil || curr.indexName != i.indexName {
-			if curr != nil {
-				result = append(result, curr)
-			}
-			curr = i
-		}
-		curr.columns = append(curr.columns, ic)
+	result, err = collectIndexes(rs)
+	if err != nil {
+		err = errors.Wrapf(err, "could not read H2 constraint metadata for %s.%s ", t.schemaName, t.tableName)
+		return
 	}
-	result = append(result, curr)
-
 	return
 }
 

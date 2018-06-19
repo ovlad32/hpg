@@ -1,10 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 type testRS struct {
@@ -26,6 +27,8 @@ func (rs *testRS) Scan(dst ...interface{}) error {
 			*dv = int(reflect.ValueOf(v).Int())
 		case *float64:
 			*dv = reflect.ValueOf(v).Float()
+		case *bool:
+			*dv = reflect.ValueOf(v).Bool()
 		case *[]byte:
 			*dv = reflect.ValueOf(v).Bytes()
 
@@ -38,20 +41,20 @@ func (rs *testRS) Scan(dst ...interface{}) error {
 	return nil
 }
 
+/*
+	     C.TABLE_SCHEMA
+	        ,C.TABLE_NAME
+	        ,C.COLUMN_NAME
+			,C.ORDINAL_POSITION
+			,C.COLUMN_DEFAULT
+			,C.NULLABLE
+			,C.TYPE_NAME
+			,C.CHARACTER_MAXIMUM_LENGTH
+			,C.NUMERIC_PRECISION
+			,C.NUMERIC_SCALE
+*/
 func TestCollectTables(t *testing.T) {
 	rs := new(testRS)
-	/*
-		     C.TABLE_SCHEMA
-		        ,C.TABLE_NAME
-		        ,C.COLUMN_NAME
-				,C.ORDINAL_POSITION
-				,C.COLUMN_DEFAULT
-				,C.NULLABLE
-				,C.TYPE_NAME
-				,C.CHARACTER_MAXIMUM_LENGTH
-				,C.NUMERIC_PRECISION
-				,C.NUMERIC_SCALE
-	*/
 	for _, tb := range tableTestData {
 		for _, cl := range tb.columns {
 			var row []interface{}
@@ -70,13 +73,51 @@ func TestCollectTables(t *testing.T) {
 	}
 	result, err := collectTables(rs)
 	if err != nil {
-		t.Error(err)
+		t.Error(errors.Wrap(err, "Error while scanning table/column values"))
 	}
-
 	if !reflect.DeepEqual(result, tableTestData) {
-		t.Error(errors.New("collection is wrong"))
+		t.Error(errors.New("table/column collection is wrong"))
+	}
+	return
+}
+
+/*
+C.TABLE_SCHEMA
+		,C.TABLE_NAME
+		,C.INDEX_NAME
+		,C.NON_UNIQUE
+		,C.INDEX_TYPE_NAME
+		,C.CONSTRAINT_NAME
+		,C.COLUMN_NAME
+		,C.ORDINAL_POSITION
+		,C.ASC_OR_DESC
+*/
+
+func TestCollectIndexes(t *testing.T) {
+	rs := new(testRS)
+
+	for _, idx := range indexTestData {
+		for _, cl := range idx.columns {
+			var row []interface{}
+			row = append(row, idx.schemaName)
+			row = append(row, idx.tableName)
+			row = append(row, idx.indexName)
+			row = append(row, idx.nonUnique)
+			row = append(row, idx.typeName)
+			row = append(row, idx.consName)
+			row = append(row, cl.columnName)
+			row = append(row, cl.position)
+			row = append(row, cl.asc)
+			rs.data = append(rs.data, row)
+		}
+	}
+	result, err := collectIndexes(rs)
+	if err != nil {
+		t.Error(errors.Wrap(err, "Error while scanning index/column values"))
 	}
 
+	if !reflect.DeepEqual(result, indexTestData) {
+		t.Error(errors.New("index/column collection is wrong"))
+	}
 	return
-
 }
