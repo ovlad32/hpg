@@ -45,11 +45,31 @@ type IResultSet interface {
 	Scan(...interface{}) error
 }
 
+func (h2 db) grabSchema(schemaName string) (s *schema, err error) {
+	s = &schema{
+		schemaName: schemaName,
+	}
+	s.tables, err = h2.grabTables(schemaName)
+	for _, t := range s.tables {
+		t.cons, err = h2.grabConstraints(t)
+		if err != nil {
+			return
+		}
+		t.indexes, err = h2.grabIndexes(t)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func collectTables(rs IResultSet) (result []*table, err error) {
 	var curTab *table
 	for rs.Next() {
 		var c = new(column)
+
 		err = rs.Scan(
+
 			&c.schemaName,
 			&c.tableName,
 			&c.columnName,
@@ -83,7 +103,7 @@ func collectTables(rs IResultSet) (result []*table, err error) {
 	return
 }
 
-func (h2 *db) grabTable(schemaName string) (result *schema, err error) {
+func (h2 *db) grabTables(schemaName string) (result []*table, err error) {
 	query := `
 	SELECT 
         C.TABLE_SCHEMA
@@ -116,7 +136,7 @@ func (h2 *db) grabTable(schemaName string) (result *schema, err error) {
 		return
 	}
 	defer rs.Close()
-	result.tables, err = collectTables(rs)
+	result, err = collectTables(rs)
 	if err != nil {
 		errors.Wrapf(err, "could not read H2 table metadata from schema %s", schemaName)
 		return
@@ -151,7 +171,7 @@ func collectConstraints(rs IResultSet) (result []*constraint, err error) {
 	return
 }
 
-func (h2 *db) grabConstraints(t table) (result []*constraint, err error) {
+func (h2 *db) grabConstraints(t *table) (result []*constraint, err error) {
 
 	query := `
 	SELECT 
@@ -235,7 +255,7 @@ func collectIndexes(rs IResultSet) (result []*index, err error) {
 
 }
 
-func (h2 *db) grabIndexes(t table) (result []*index, err error) {
+func (h2 *db) grabIndexes(t *table) (result []*index, err error) {
 	query := `
 	SELECT 
 		C.TABLE_SCHEMA
@@ -267,7 +287,7 @@ func (h2 *db) grabIndexes(t table) (result []*index, err error) {
 	defer rs.Close()
 	result, err = collectIndexes(rs)
 	if err != nil {
-		err = errors.Wrapf(err, "could not read H2 constraint metadata for %s.%s ", t.schemaName, t.tableName)
+		err = errors.Wrapf(err, "could not read H2 index metadata for %s.%s ", t.schemaName, t.tableName)
 		return
 	}
 	return
@@ -316,11 +336,27 @@ func (t *table) createDDL() (result string) {
 }
 
 func (t *table) dropDDL() (result string) {
-	result = fmt.Sprintf("drop tab;e if exists %s.%s;", t.schemaName, t.tableName)
+	result = fmt.Sprintf("drop table if exists %s.%s;", t.schemaName, t.tableName)
 	return
 }
 
 func (c *column) createDDL() (result string) {
 	//TODO: accomplish it
+	pgColumn := c
+	switch strings.ToUpper(c.typeName) {
+	case "BIGINT", "BOOLEAN", "INTEGER", "SMALLINT":
+		pgColumn.typeName = strings.ToLower(c.typeName)
+	case "DECIMAL":
+		pgColumn.typeName = "numeric"
+	case "VARCHAR":
+		pgColumn.typeName = "character varying"
+	case "DOUBLE":
+		pgColumn.typeName = "double precision"
+	case "TIMESTAMP":
+		pgColumn.typeName = "timestamp without time zone"
+	case "CLOB", "BLOB", "VARBINARY":
+		pgColumn.typeName = "bytea"
+	}
+
 	return
 }
