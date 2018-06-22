@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"runtime"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -16,9 +18,15 @@ func main() {
 	signal.Notify(signalChan, os.Interrupt)
 	//, os.Kill
 
+	m := mux.NewRouter()
+	m.HandleFunc("/items", ItemsHandler).Methods("GET")
+	m.HandleFunc("/about", AboutHandler).Methods("GET")
+	m.HandleFunc("/item/add", ItemAddHandler).Methods("POST")
+
 	hs := http.Server{
 		Addr:     ":8090",
 		ErrorLog: log.New(os.Stderr, "", 0),
+		Handler:  m,
 	}
 
 	//http.ListenAndServe(":8090")
