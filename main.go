@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -48,4 +49,9 @@ func main() {
 	}()
 
 	runtime.Goexit()
+}
+
+func NewZapLogger() (result *zap.Logger) {
+	result = zap.S()
+	return
 }
