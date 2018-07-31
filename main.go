@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
@@ -47,11 +48,23 @@ func main() {
 		}
 		log.Println("Server stopped.")
 	}()
+	app = fx.New(
+		fx.Provide(provideCurrentPath),
+		fx.Provide(provideZapLogger),
+	)
+
+	fx.Populate()
 
 	runtime.Goexit()
 }
 
-func NewZapLogger() (result *zap.Logger) {
+func provideZapLogger() (result *zap.Logger) {
 	result = zap.S()
 	return
+}
+
+type CurrentPath string
+
+func provideCurrentPath() (result CurrentPath, err error) {
+	result, err = os.Getwd()
 }
