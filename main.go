@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
-	"time"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
+
+//var app *fx.App
 
 func main() {
 
@@ -20,19 +20,18 @@ func main() {
 	signal.Notify(signalChan, os.Interrupt)
 	//, os.Kill
 
-	m := mux.NewRouter()
-	m.HandleFunc("/items", ItemsHandler).Methods("GET")
-	m.HandleFunc("/about", AboutHandler).Methods("GET")
-	m.HandleFunc("/item/add", ItemAddHandler).Methods("POST")
-
-	hs := http.Server{
-		Addr:     ":8090",
-		ErrorLog: log.New(os.Stderr, "", 0),
-		Handler:  m,
-	}
+	//m.HandleFunc("/items", ItemsHandler).Methods("GET")
+	//m.HandleFunc("/about", AboutHandler).Methods("GET")
+	//m.HandleFunc("/item/add", ItemAddHandler).Methods("POST")
+	/*
+		hs := http.Server{
+			Addr:     ":8090",
+			ErrorLog: log.New(os.Stderr, "", 0),
+			Handler:  m,
+		}*/
 
 	//http.ListenAndServe(":8090")
-	go func() {
+	/*go func() {
 		log.Println("Server is running...")
 		if err := hs.ListenAndServe(); err != nil {
 			log.Fatal(err)
@@ -48,23 +47,63 @@ func main() {
 		}
 		log.Println("Server stopped.")
 	}()
-	app = fx.New(
+	*/
+	app := fx.New(
 		fx.Provide(provideCurrentPath),
-		fx.Provide(provideZapLogger),
+		fx.Provide(NewZapLogger),
+		fx.Provide(NewStorage),
+		fx.Provide(NewHttpServer),
+		fx.Invoke(FirstBloodEndpoint),
+		fx.Invoke(AllTodoItemEndpoint),
 	)
-
-	fx.Populate()
-
-	runtime.Goexit()
+	_ = app
+	app.Run()
 }
 
-func provideZapLogger() (result *zap.Logger) {
-	result = zap.S()
+func NewZapLogger() (result *zap.Logger, err error) {
+	result, err = zap.NewDevelopment()
 	return
 }
 
 type CurrentPath string
 
 func provideCurrentPath() (result CurrentPath, err error) {
-	result, err = os.Getwd()
+	s, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	result = CurrentPath(s)
+	return
+}
+
+func NewHttpServer(lc fx.Lifecycle, logger *zap.Logger) (result *mux.Router) {
+	result = mux.NewRouter()
+	hs := http.Server{
+		Addr:     ":8090",
+		ErrorLog: log.New(os.Stderr, "", 0),
+		Handler:  result,
+	}
+
+	lc.Append(
+		fx.Hook{
+			OnStart: func(ctx context.Context) (err error) {
+				log.Println("Server is running...")
+				go func() {
+					if err = hs.ListenAndServe(); err != nil {
+						log.Fatal(err)
+					}
+				}()
+				return nil
+			},
+			OnStop: func(ctx context.Context) (err error) {
+				hs.Shutdown(ctx)
+				log.Println("Server stopped.")
+				return nil
+			},
+		},
+	)
+	/*
+		OnStart func(context.Context) error
+	OnStop  func(context.Context) error*/
+	return
 }
