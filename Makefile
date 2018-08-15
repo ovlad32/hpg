@@ -12,13 +12,13 @@ all: test build
 build: 
 		$(GOBUILD) -o $(EXECUTABLE) -v
 test: 
-		$(GOTEST) -v ./...
+		$(GOTEST) -v . 
 clean: 
 		$(GOCLEAN)
-		rm -f $(BINARY_WINDOWS)
-		rm -f $(BINARY_UNIX)
+		#rm -f $(BINARY_WINDOWS)
+		#rm -f $(BINARY_UNIX)
 run:
-		$(GOBUILD) -o $(EXECUTABLE) -v ./...
+		$(GOBUILD) -o $(EXECUTABLE) -v .
 		./$(EXECUTABLE)
 deps:
 		$(GOGET) github.com/markbates/goth

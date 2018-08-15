@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/ovlad32/hpg/todo"
+
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -51,10 +53,10 @@ func main() {
 	app := fx.New(
 		fx.Provide(provideCurrentPath),
 		fx.Provide(NewZapLogger),
-		fx.Provide(NewStorage),
 		fx.Provide(NewHttpServer),
-		fx.Invoke(FirstBloodEndpoint),
-		fx.Invoke(AllTodoItemEndpoint),
+		fx.Provide(NewTodo),
+		fx.Invoke(FirstBloodEP),
+		fx.Invoke(AllTodoItemsEP),
 	)
 	_ = app
 	app.Run()
@@ -87,23 +89,27 @@ func NewHttpServer(lc fx.Lifecycle, logger *zap.Logger) (result *mux.Router) {
 	lc.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) (err error) {
-				log.Println("Server is running...")
+				logger.Info("Server is running...")
 				go func() {
 					if err = hs.ListenAndServe(); err != nil {
-						log.Fatal(err)
+						logger.Panic("Failed to start http server", zap.Error(err))
 					}
 				}()
 				return nil
 			},
 			OnStop: func(ctx context.Context) (err error) {
 				hs.Shutdown(ctx)
-				log.Println("Server stopped.")
+				logger.Info("Server stopped.")
 				return nil
 			},
 		},
 	)
 	/*
 		OnStart func(context.Context) error
-	OnStop  func(context.Context) error*/
+		OnStop  func(context.Context) error*/
 	return
+}
+
+func NewTodo(logger *zap.Logger) (r *todo.Dispatcher, err error) {
+	return todo.New(todo.Logger(logger))
 }

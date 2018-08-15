@@ -1,6 +1,9 @@
-package main
+package todo
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+)
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
@@ -9,7 +12,7 @@ const (
 	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
 
-func RandStringBytesMaskImpr(n int) string {
+func randStringBytesMaskImpr(n int) string {
 	b := make([]byte, n)
 	// A rand.Int63() generates 63 random bits, enough for letterIdxMax letters!
 	for i, cache, remain := n-1, rand.Int63(), letterIdxMax; i >= 0; {
@@ -25,4 +28,25 @@ func RandStringBytesMaskImpr(n int) string {
 	}
 
 	return string(b)
+}
+
+func fillStorageWithMockData(s *storage) (err error) {
+	var id string
+	var added = time.Now().Add(time.Duration(-30) * time.Second)
+	var done = time.Now()
+	id, _ = NewItemID()
+	s.put(&Item{
+		ID:    id,
+		Note:  "Note1",
+		Added: &added,
+		Done:  &done,
+	})
+	id, _ = NewItemID()
+	added = time.Now().Add(time.Duration(-30) * time.Second)
+	s.put(&Item{
+		ID:    id,
+		Note:  "Note2",
+		Added: &added,
+	})
+	return
 }
