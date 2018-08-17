@@ -37,6 +37,10 @@ func (t *Dispatcher) GetAll() (result Items, err error) {
 	result, err = t.storage.getAll()
 	return
 }
+func (t *Dispatcher) NewId() (result string, err error) {
+	result, err = NewItemID()
+	return
+}
 
 func Logger(l *zap.Logger) Option {
 	return func(d *Dispatcher) {

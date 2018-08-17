@@ -65,6 +65,30 @@ func AllTodoItemsEP(
 			}
 		},
 	)
+
+	h.HandleFunc("/item/newid",
+		func(w http.ResponseWriter, r *http.Request) {
+			logger.Info("Got a newid request")
+			id, err := todo.NewId()
+			type resp struct {
+				Id string `json:"newid"`
+			}
+			vr := &resp{}
+			vr.Id = id
+			data, err := json.Marshal(vr)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // HTTP 1.1.
+			w.Header().Set("Pragma", "no-cache")                                   // HTTP 1.0.
+			w.Header().Set("Expires", "0")                                         // Proxies.
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+			} else {
+				w.WriteHeader(http.StatusOK)
+				w.Write(data)
+			}
+		},
+	)
+
 	return nil
 }
 
