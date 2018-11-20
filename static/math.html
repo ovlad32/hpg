@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<htm lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <title>Todo app</title>
+        <style>
+            div {
+                b2ackground-color: red;
+            }
+        </style>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    </head>
+
+    <body>
+        <form id="math" nethod="get">
+                <input type="text" id="a">
+                <input type="text" id="b">
+                <input type="text" disable id="c">
+            
+                <input type="submit" value="go">
+        </form>
+        </body>
+        <script lang="javascript">
+            $("#math").submit(function(event){
+                    event.preventDefault();
+                    $.post("/api/math/add",
+                        JSON.stringify({
+                            a:Number($("#a").val()),
+                            b:Number($("#b").val()),
+                         }),
+                         ).done(function(data) {
+                            $("#c").val(data.c);
+                            }
+                         ).fail(function() {alert("fail");}
+                    );
+                    return false
+            }
+            
+            )
+        </script>
+    </html>

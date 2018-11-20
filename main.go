@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-
-	"github.com/ovlad32/hpg/todo"
+	"time"
 
 	"github.com/gorilla/mux"
+	gsw "github.com/linxGnu/goseaweedfs"
+	"github.com/ovlad32/hpg/todo"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -20,6 +22,15 @@ func main() {
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
+	sw := gsw.NewSeaweed("http", "seaweed.master:9334", []string{"memory"}, 2*1024*1024, 5*time.Minute)
+
+	cm, fp, flid, err := sw.UploadFile("main.go", "", "")
+	fmt.Printf("ChunkManifest: %v\n", cm)
+	fmt.Printf("FilePart: %v\n", fp)
+	fmt.Printf("fileId: %v\n", flid)
+	fmt.Printf("Error: %v\n", err)
+	os.Exit(1)
+
 	//, os.Kill
 
 	//m.HandleFunc("/items", ItemsHandler).Methods("GET")
