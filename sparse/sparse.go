@@ -6,11 +6,11 @@ import (
 	"math/bits"
 )
 
-type b3DimType [][][]int64
-type b2DimType [][]int64
-type b1DimType []int64
+type b3DimType [][][]uint64
+type b2DimType [][]uint64
+type b1DimType []uint64
 
-const compactionCountDefault uint32 = 2
+var compactionCountDefault int32 = 2
 
 /**
  *  The number of bits in a long value.
@@ -54,17 +54,17 @@ const LEVEL1 = INDEX_SIZE - LEVEL2 - LEVEL3 - LEVEL4
 /**
  *  MAX_LENGTH1 is the maximum number of entries in the level1 set array.
  */
-const MAX_LENGTH1 uint32 = 1 << LEVEL1
+var MAX_LENGTH1 uint32 = 1 << uint(LEVEL1)
 
 /**
  *  LENGTH2 is the number of entries in the any level2 area.
  */
-const LENGTH2 uint32 = 1 << LEVEL2
+var LENGTH2 uint32 = 1 << uint(LEVEL2)
 
 /**
  *  LENGTH3 is the number of entries in the any level3 block.
  */
-const LENGTH3 uint32 = 1 << LEVEL3
+var LENGTH3 uint32 = 1 << uint(LEVEL3)
 
 /**
  *  The shift to create the word index. (I.e., move it to the right end)
@@ -75,7 +75,7 @@ const SHIFT3 uint32 = LEVEL4
  *  MASK3 is the mask to extract the LEVEL3 address from a word index
  *  (after shifting by SHIFT3).
  */
-const MASK3 uint32 = LENGTH3 - 1
+var MASK3 uint32 = uint32(LENGTH3 - 1)
 
 /**
  *  SHIFT2 is the shift to bring the level2 address (from the word index) to
@@ -93,28 +93,28 @@ var UNIT uint32 = LENGTH2 * LENGTH3 * LENGTH4
  *  MASK2 is the mask to extract the LEVEL2 address from a word index
  *  (after shifting by SHIFT3 and SHIFT2).
  */
-const MASK2 uint32 = LENGTH2 - 1
+var MASK2 uint32 = uint32(LENGTH2 - 1)
 
 /**
  *  SHIFT1 is the shift to bring the level1 address (from the word index) to
  *  the right end (i.e., after shifting by SHIFT3).
  */
-const SHIFT1 uint32 = LEVEL2 + LEVEL3
+var SHIFT1 uint32 = LEVEL2 + LEVEL3
 
 /**
  *  LENGTH2_SIZE is maximum index of a LEVEL2 page.
  */
-const LENGTH2_SIZE uint32 = LENGTH2 - 1
+var LENGTH2_SIZE uint32 = uint32(LENGTH2 - 1)
 
 /**
  *  LENGTH3_SIZE is maximum index of a LEVEL3 page.
  */
-const LENGTH3_SIZE uint32 = LENGTH3 - 1
+var LENGTH3_SIZE uint32 = uint32(LENGTH3 - 1)
 
 /**
  *  LENGTH4_SIZE is maximum index of a bit in a LEVEL4 word.
  */
-const LENGTH4_SIZE uint32 = LENGTH4 - 1
+var LENGTH4_SIZE uint32 = uint32(LENGTH4 - 1)
 
 /** An empty level 3 block is kept for use when scanning. When a source block
  *  is needed, and there is not already one in the corresponding bit set, the
@@ -174,7 +174,7 @@ type BitSet struct {
 	 *  This value controls for format of the toString() output.
 	 * @see #toStringCompaction(int)
 	 */
-	compactionCount uint32
+	compactionCount int32
 
 	/**
 	 *  The storage for this SparseBitSet. The <i>i</i>th bit is stored in a word
@@ -229,7 +229,7 @@ func NewWithSize(capacity uint32) *BitSet {
 	return NewWithSizeAndCompactionCount(1, compactionCountDefault)
 }
 
-func NewWithSizeAndCompactionCount(capacity uint32, compactionCount uint32) *BitSet {
+func NewWithSizeAndCompactionCount(capacity uint32, compactionCount int32) *BitSet {
 	result := &BitSet{
 		compactionCount: compactionCount,
 	}
@@ -242,7 +242,7 @@ func NewWithSizeAndCompactionCount(capacity uint32, compactionCount uint32) *Bit
 }
 
 func highestOneBit(x uint32) (result uint32) {
-	l := bits.Len32(x)
+	l := bits.Len(uint(x))
 	if result == 0 {
 		return
 	}
@@ -253,8 +253,8 @@ func highestOneBit(x uint32) (result uint32) {
 func (this *BitSet) resize(index uint32) {
 	/*  Find an array size that is a power of two that is as least as large
 	enough to contain the index requested. */
-	w1 := (index >> SHIFT3) >> SHIFT1
-	newSize := highestOneBit(w1)
+	w1 := uint32(index>>SHIFT3) >> SHIFT1
+	newSize := uint32(highestOneBit(w1))
 	if newSize == 0 {
 		newSize = 1
 	}
@@ -278,8 +278,8 @@ func (this *BitSet) resize(index uint32) {
 			copy(temp, this.bits)
 			this.nullify(0) //  Don't leave unused pointers around. */
 		}
-		this.bits = temp                        //  Set new array as the set array
-		this.bitsLength = uint32(math.MaxInt32) //  Index of last possible bit, plus one.
+		this.bits = temp                //  Set new array as the set array
+		this.bitsLength = math.MaxInt32 //  Index of last possible bit, plus one.
 		if newSize != MAX_LENGTH1 {
 			this.bitsLength = newSize * UNIT
 		}
@@ -320,7 +320,7 @@ func (this *BitSet) constructorHelper() {
  * @since       1.6
  * @see         AbstractStrategy
  */
-func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
+func (this *BitSet) setScanner(i, j uint32, b *BitSet, op strateger) {
 
 	/*  This method has been assessed as having a McCabe cyclomatic
 	complexity of 47 (i.e., impossibly high). However, given that this
@@ -356,25 +356,27 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 
 	/*  Index of the current word, and mask for the first word,
 	to be processed in the bit set. */
-	u := i >> SHIFT3
-	um := ^0 << uint32(i)
+	u := uint32(i) >> SHIFT3
+	//final long um = ~0L << i;
+	um := uint64(int64(^0) << uint(i))
 
 	/*  Index of the final word, and mask for the final word,
 	to be processed in the bit set. */
-	v := (j - 1) >> SHIFT3
-	vm := bits.RotateLeft32(int32(^0), j)
+	v := uint32((j - 1)) >> SHIFT3
+	// final long vm = ~0L >>> -j;
+	vm := ^uint64(int64(^0) << uint(j))
 
 	/*  Set up the two bit arrays (if the second exists), and their
 	corresponding lengths (if any). */
 	a1 := this.bits //  Level1, i.e., the bit arrays
-	aLength1 := this.bits.length
+	aLength1 := uint32(len(this.bits))
 
-	var b1 b3DimType = nil
-	bLength1 := 0
+	var b1 b3DimType
+	var bLength1 uint32 = 0
 
 	if b1 != nil {
 		b1 = b.bits
-		bLength1 = len(b.bits)
+		bLength1 = uint32(len(b.bits))
 	}
 
 	/*  Calculate the initial values of the parts of the words addresses,
@@ -389,9 +391,9 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 
 	/*  Initialize the local copies of the counts of blocks and areas; and
 	whether there is a partial first block.  */
-	a2CountLocal = 0
-	a3CountLocal = 0
-	notFirstBlock = u == 0 && um == ^0
+	var a2CountLocal int32 = 0
+	var a3CountLocal int32 = 0
+	notFirstBlock := u == 0 && um == ^uint64(0)
 
 	/*  The first level2 is cannot be judged empty if not being scanned from
 	the beginning. */
@@ -399,11 +401,11 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 	for i < j {
 		/*  Determine if there is a level2 area in both the a and the b set,
 		and if so, set the references to these areas. */
-		a2 = a1[u1]
+		a2 := a1[u1]
 		haveA2 := u1 < aLength1 && a2 != nil
-		b2 = b1[u1]
+		b2 := b1[u1]
 
-		haveB2 = u1 < bLength1 && b1 != null && b2 != nil
+		haveB2 := u1 < bLength1 && b1 != nil && b2 != nil
 		/*  Handling of level 2 empty areas: determined by the
 		properties of the strategy. It is necessary to actually visit
 		the first and last blocks of a scan, since not all of the block
@@ -417,19 +419,20 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 		} else {
 			limit2 := LENGTH2
 			if u1 == v1 {
-				limit2 = v2 + 1
+				limit2 = uint32(v2 + 1)
 			}
 
-			for u2 != limit2 {
+			for u2 != uint32(limit2) {
 				/*  Similar logic applied here as for the level2 blocks.
 				The initial and final block must be examined. In other
 				cases, it may be possible to make a decision based on
 				the value of the references, as indicated by the
 				properties of the strategy. */
 				a3 := a2[u2]
-				haveA3 = haveA2 && a3 != nil
+				a3IsSpare := false
+				haveA3 := haveA2 && a3 != nil
 				b3 := b2[u2]
-				haveB3 = haveB2 && b3 != nil
+				haveB3 := haveB2 && b3 != nil
 				a3Block := (u1 << LEVEL2) + u2
 				notLastBlock := lastA3Block != a3Block
 
@@ -445,10 +448,11 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 					base3 := a3Block << SHIFT2
 					limit3 := LENGTH3
 					if !notLastBlock {
-						limit3 = v3
+						limit3 = uint32(v3)
 					}
 					if !haveA3 {
-						a3 = spare
+						a3 = this.spare
+						a3IsSpare = true
 					}
 					if !haveB3 {
 						b3 = ZERO_BLOCK
@@ -471,7 +475,7 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 						} else {
 							// u, v are correct if first block
 							if u == v { //  Scan starts and ends in one word
-								isZero = op.word(base3, u3, a3, b3, um&vm)
+								isZero = op.word(base3, u3, a3, b3, (um & vm))
 							} else {
 								// Scan starts in this a3 block
 								isZero = op.word(base3, u3, a3, b3, um)
@@ -501,24 +505,26 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 					} else {
 						/*  If the a3 block used was the spare block, put it
 						into current level2 area; get a new spare block. */
-						if a3 == spare {
-							if i >= bitsLength { //Check that the set is large
+						if a3IsSpare {
+							if uint32(i) >= this.bitsLength { //Check that the set is large
 								//  enough to take the new block
-								resize(i) //  Make it large enough
-								a1 = bits //  Update reference and length
-								aLength1 = a1.length
+								this.resize(uint32(i)) //  Make it large enough
+								a1 = this.bits         //  Update reference and length
+								aLength1 = uint32(len(a1))
 							}
-							if a2 == null { //  Ensure a level 2 area
+							if a2 == nil { //  Ensure a level 2 area
 								a2 = make(b2DimType, LENGTH2)
 								a1[u1] = a2
 								haveA2 = true //  Ensure know level2 not empty
 							}
-							a2[u2] = a3                      //  Insert the level3 block
-							spare = make(b1DimType, LENGTH3) // Replace the spare
+							a2[u2] = a3 //  Insert the level3 block
+							a3IsSpare = false
+							this.spare = make(b1DimType, LENGTH3) // Replace the spare
+
 						}
 						a3CountLocal++ // Count the level 3 block
 					}
-					a2IsEmpty &= !(haveA2 && a2[u2] != null)
+					a2IsEmpty = a2IsEmpty && !(haveA2 && a2[u2] != nil)
 				} //  Keep track of level 2 usage
 				u2++
 				u3 = 0
@@ -534,11 +540,11 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 		/*  Advance the value of u based on what happened. */
 		u1++
 		u = (u1 << SHIFT1)
-		i = u << SHIFT3
+		i = uint32(u << SHIFT3)
 		u2 = 0 //  u3 = 0
 		//  Compute next word and bit index
 		if i < 0 {
-			i = Math.MaxInt32 //  Don't go over the end
+			i = math.MaxInt32 //  Don't go over the end
 		}
 
 	} /* end while( i < j ) */
@@ -555,11 +561,11 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
  *
  * @since       1.6
  */
-func (b *BitSet) statisticsUpdate() {
-	if b.cache.hash != 0 {
+func (this *BitSet) statisticsUpdate() {
+	if this.cache.hash != 0 {
 		return
 	}
-	b.setScanner(0, b.bitsLength, nil, b.updateStrategy)
+	this.setScanner(0, this.bitsLength, nil, this.updateStrategy)
 }
 
 //=============================================================================
@@ -702,8 +708,8 @@ type cacheType struct {
 type strateger interface {
 	properties() int32
 	start(*BitSet) bool
-	word(base, u3 int32, a3, b3 []int64, mask int64) bool
-	block(base, u3, v3 int32, a3, b3 []int64) bool
+	word(base, u3 uint32, a3, b3 b1DimType, mask uint64) bool
+	block(base, u3, v3 uint32, a3, b3 b1DimType) bool
 	finish(a2Count, a3Count int32)
 }
 
@@ -742,11 +748,11 @@ const X_OP_F_EQ_F = 0x4
  */
 const X_OP_F_EQ_X = 0x8
 
-func isZeroBlock(a3 []int64) bool {
+func isZeroBlock(a3 b1DimType) bool {
 	for _, word := range a3 {
-	}
-	if word != 0 {
-		return false
+		if word != 0 {
+			return false
+		}
 	}
 	return true
 }
@@ -866,12 +872,12 @@ func (st clearStrategyType) start(b *BitSet) bool {
 	return true
 }
 
-func (st clearStrategyType) word(base, u3 int32, a3, b3 []int64, mask int64) bool {
+func (st clearStrategyType) word(base, u3 uint32, a3, b3 []uint64, mask uint64) bool {
 	a3[u3] = a3[u3] & ^mask
 	return a3[u3] == 0
 }
 
-func (st clearStrategyType) block(base, u3, v3 int32, a3, b3 []int64) (isZero bool) {
+func (st clearStrategyType) block(base, u3, v3 uint32, a3, b3 []uint64) (isZero bool) {
 	if u3 != 0 || v3 != LENGTH3 {
 		for w3 := u3; w3 != v3; w3 = w3 + 1 {
 			a3[w3] = 0
@@ -1029,17 +1035,17 @@ func (st *intersectsStrategyType) start(b *BitSet) bool {
 	not be reset. */
 }
 
-func (st *intersectsStrategyType) word(base, u3 int32, a3, b3 []int64, mask int64) bool {
+func (st *intersectsStrategyType) word(base, u3 uint32, a3, b3 b1DimType, mask uint64) bool {
 	word := a3[u3]
 	st.result = st.result || ((word & b3[u3] & mask) != 0)
 	return word == 0
 }
 
-func (st *intersectsStrategyType) block(base, u3, v3 int32, a3, b3 []int64) (isZero bool) {
+func (st *intersectsStrategyType) block(base, u3, v3 uint32, a3, b3 b1DimType) (isZero bool) {
 	isZero = true
 	for w3 := u3; w3 != v3; w3 = w3 + 1 {
 		word := a3[w3]
-		st.result = st.result || (word & b3[w3])
+		st.result = st.result || ((word & b3[w3]) != 0)
 		isZero = isZero && word == 0
 	}
 	return
@@ -1071,12 +1077,12 @@ func (st orStrategyType) start(b *BitSet) bool {
 	return true
 }
 
-func (st orStrategyType) word(base, u3 int32, a3, b3 []int64, mask int64) bool {
-	a3[u3] = a3[u3] | (b3[w3] & mask)
+func (st orStrategyType) word(base, u3 int32, a3, b3 b1DimType, mask uint64) bool {
+	a3[u3] = a3[u3] | (b3[u3] & mask)
 	return a3[u3] == 0
 }
 
-func (st orStrategyType) block(base, u3, v3 int32, a3, b3 []int64) (isZero bool) {
+func (st orStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero bool) {
 	isZero = true
 	for w3 := u3; w3 != v3; w3 = w3 + 1 {
 		a3[w3] = a3[w3] | b3[w3]
@@ -1203,21 +1209,21 @@ func (st *updateStrategyType) start(b *BitSet) bool {
 	return false
 }
 
-func (st updateStrategyType) word(base, u3 int32, a3, b3 []int64, mask int64) bool {
+func (st updateStrategyType) word(base, u3 uint32, a3, b3 b1DimType, mask uint64) bool {
 	word := a3[u3]
 	word1 := word & mask
 	if word1 != 0 {
-		compute(base+u3, word1)
+		st.compute(base+u3, word1)
 	}
 	return word == 0
 }
 
-func (st *updateStrategyType) block(base, u3, v3 int32, a3, b3 []int64) (isZero bool) {
+func (st *updateStrategyType) block(base, u3, v3 uint32, a3, b3 b1DimType) (isZero bool) {
 	isZero = true //  Presumption
 	for w3 := u3; w3 != v3; w3 = w3 + 1 {
 		if word := a3[w3]; word != 0 {
 			isZero = false
-			compute(base+w3, word)
+			st.compute(base+w3, word)
 		}
 	}
 	isZero = false
@@ -1234,7 +1240,7 @@ func (st *updateStrategyType) finish(a2Count, a3Count int32) {
 	cache.hash = (int)((st.hash >> Integer.SIZE) ^ st.hash)
 }
 
-func (st *updateStrategyType) compute(index int32, word int64) {
+func (st *updateStrategyType) compute(index uint32, word uint64) {
 	/*  Count the number of actual words being used. */
 	count++
 	/*  Continue to accumulate the hash value of the set. */
