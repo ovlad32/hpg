@@ -1,5 +1,6 @@
 package main
 
+//gsw "github.com/linxGnu/goseaweedfs"
 import (
 	"context"
 	"fmt"
@@ -7,28 +8,37 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/gorilla/mux"
-	gsw "github.com/linxGnu/goseaweedfs"
+	"github.com/ovlad32/hpg/sparse"
 	"github.com/ovlad32/hpg/todo"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 //var app *fx.App
+func sparseTest() {
+	sb := sparse.New()
+	sb.SetValue(0, true)
+	sb.SetValue(3, true)
+	sb.SetValue(31, true)
+	sb.SetValue(32, true)
+	sb.SetValue(32*5, true)
+	fmt.Println(sb.Cardinality())
 
+}
 func main() {
-
+	sparseTest()
+	return
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
-	sw := gsw.NewSeaweed("http", "seaweed.master:9334", []string{"memory"}, 2*1024*1024, 5*time.Minute)
+	/*	sw := gsw.NewSeaweed("http", "seaweed.master:9334", []string{"memory"}, 2*1024*1024, 5*time.Minute)
 
-	cm, fp, flid, err := sw.UploadFile("main.go", "", "")
-	fmt.Printf("ChunkManifest: %v\n", cm)
-	fmt.Printf("FilePart: %v\n", fp)
-	fmt.Printf("fileId: %v\n", flid)
-	fmt.Printf("Error: %v\n", err)
+		cm, fp, flid, err := sw.UploadFile("main.go", "", "")
+		fmt.Printf("ChunkManifest: %v\n", cm)
+		fmt.Printf("FilePart: %v\n", fp)
+		fmt.Printf("fileId: %v\n", flid)
+		fmt.Printf("Error: %v\n", err) */
 	os.Exit(1)
 
 	//, os.Kill
