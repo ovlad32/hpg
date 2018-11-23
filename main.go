@@ -23,9 +23,11 @@ func sparseTest() {
 	sb.SetValue(3, true)
 	sb.SetValue(31, true)
 	sb.SetValue(32, true)
-	sb.SetValue(32*5, true)
+	sb.SetValue(37, true)
 	fmt.Println(sb.Cardinality())
-
+	for i := int32(0); i >= 0; i = sb.NextSetBit(i + 1) {
+		fmt.Printf(">%v\n", i)
+	}
 }
 func main() {
 	sparseTest()

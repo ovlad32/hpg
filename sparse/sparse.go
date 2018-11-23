@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
+	"reflect"
 )
 
 type wordType uint64
@@ -11,7 +12,7 @@ type b3DimType [][][]wordType
 type b2DimType [][]wordType
 type b1DimType []wordType
 
-var compactionCountDefault int32 = 2
+const compactionCountDefault int32 = 2
 
 /**
  *  The number of bits in a long value.
@@ -23,7 +24,7 @@ const INTEGER_SIZE = 32  //Integer.SIZE
  *  The number of bits in a positive integer, and the size of permitted index
  *  of a bit in the bit set.
  */
-const INDEX_SIZE uint32 = 31 //Integer.SIZE - 1;
+const INDEX_SIZE uint32 = INTEGER_SIZE - 1 //Integer.SIZE - 1;
 
 /**
  *  The label (index) of a bit in the bit set is essentially broken into
@@ -56,17 +57,17 @@ const LEVEL1 = INDEX_SIZE - LEVEL2 - LEVEL3 - LEVEL4
 /**
  *  MAX_LENGTH1 is the maximum number of entries in the level1 set array.
  */
-var MAX_LENGTH1 int32 = 1 << uint(LEVEL1)
+const MAX_LENGTH1 int32 = 1 << uint(LEVEL1)
 
 /**
  *  LENGTH2 is the number of entries in the any level2 area.
  */
-var LENGTH2 int32 = 1 << uint(LEVEL2)
+const LENGTH2 int32 = 1 << uint(LEVEL2)
 
 /**
  *  LENGTH3 is the number of entries in the any level3 block.
  */
-var LENGTH3 int32 = 1 << uint(LEVEL3)
+const LENGTH3 int32 = 1 << uint(LEVEL3)
 
 /**
  *  The shift to create the word index. (I.e., move it to the right end)
@@ -77,7 +78,7 @@ const SHIFT3 uint32 = LEVEL4
  *  MASK3 is the mask to extract the LEVEL3 address from a word index
  *  (after shifting by SHIFT3).
  */
-var MASK3 int32 = int32(LENGTH3 - 1)
+const MASK3 int32 = int32(LENGTH3 - 1)
 
 /**
  *  SHIFT2 is the shift to bring the level2 address (from the word index) to
@@ -89,34 +90,34 @@ const SHIFT2 uint32 = LEVEL3
  *  UNIT is the greatest number of bits that can be held in one level1 entry.
  *  That is, bits per word by words per level3 block by blocks per level2 area.
  */
-var UNIT int32 = LENGTH2 * LENGTH3 * LENGTH4
+const UNIT int32 = LENGTH2 * LENGTH3 * LENGTH4
 
 /**
  *  MASK2 is the mask to extract the LEVEL2 address from a word index
  *  (after shifting by SHIFT3 and SHIFT2).
  */
-var MASK2 int32 = int32(LENGTH2 - 1)
+const MASK2 int32 = int32(LENGTH2 - 1)
 
 /**
  *  SHIFT1 is the shift to bring the level1 address (from the word index) to
  *  the right end (i.e., after shifting by SHIFT3).
  */
-var SHIFT1 uint32 = LEVEL2 + LEVEL3
+const SHIFT1 uint32 = LEVEL2 + LEVEL3
 
 /**
  *  LENGTH2_SIZE is maximum index of a LEVEL2 page.
  */
-var LENGTH2_SIZE int32 = int32(LENGTH2 - 1)
+const LENGTH2_SIZE int32 = int32(LENGTH2 - 1)
 
 /**
  *  LENGTH3_SIZE is maximum index of a LEVEL3 page.
  */
-var LENGTH3_SIZE int32 = int32(LENGTH3 - 1)
+const LENGTH3_SIZE int32 = int32(LENGTH3 - 1)
 
 /**
  *  LENGTH4_SIZE is maximum index of a bit in a LEVEL4 word.
  */
-var LENGTH4_SIZE int32 = int32(LENGTH4 - 1)
+const LENGTH4_SIZE int32 = int32(LENGTH4 - 1)
 
 /** An empty level 3 block is kept for use when scanning. When a source block
  *  is needed, and there is not already one in the corresponding bit set, the
@@ -224,14 +225,57 @@ type BitSet struct {
 	updateStrategy *updateStrategyType
 }
 
+/**
+ *  Constructs an empty bit set with the default initial size.
+ *  Initially all bits are effectively <code>false</code>.
+ *
+ * @since       1.6
+ */
+//    public SparseBitSet()
 func New() *BitSet {
-	return NewWithSizeAndCompactionCount(1, compactionCountDefault)
-}
-func NewWithSize(capacity uint32) *BitSet {
-	return NewWithSizeAndCompactionCount(1, compactionCountDefault)
+	return newWithSizeAndCompactionCount(1, compactionCountDefault)
 }
 
-func NewWithSizeAndCompactionCount(capacity int32, compactionCount int32) *BitSet {
+/**
+*  Creates a bit set whose initial size is large enough to efficiently
+*  represent bits with indices in the range <code>0</code> through
+*  at least <code>nbits-1</code>. Initially all bits are effectively
+*  <code>false</code>.
+*  <p>
+*  No guarantees are given for how large or small the actual object will be.
+*  The setting of bits above the given range is permitted (and will perhaps
+*  eventually cause resizing).
+*
+* @param       nbits the initial provisional length of the SparseBitSet
+* @throws      java.lang.NegativeArraySizeException if the specified initial
+*              length is negative
+* @see         #SparseBitSet()
+* @since       1.
+ */
+// public SparseBitSet(int nbits) throws NegativeArraySizeException
+func NewWithSize(capacity uint32) *BitSet {
+	return newWithSizeAndCompactionCount(1, compactionCountDefault)
+}
+
+/**
+ *  Constructor for a new (sparse) bit set. All bits initially are effectively
+ *  <code>false</code>. This is a internal constructor that collects all the
+ *  needed actions to initialise the bit set.
+ *  <p>
+ *  The capacity is taken to be a <i>suggestion</i> for a size of the bit set,
+ *  in bits. An appropiate table size (a power of two) is then determined and
+ *  used. The size will be grown as needed to accomodate any bits addressed
+ *  during the use of the bit set.
+ *
+ * @param       capacity a size in terms of bits
+ * @param       compactionCount the compactionCount to be inherited (for
+ *              internal generation)
+ * @exception   NegativeArraySizeException if the specified initial size
+ *              is negative
+ * @since       1.6
+ */
+//    protected SparseBitSet(int capacity, int compactionCount) throws NegativeArraySizeException
+func newWithSizeAndCompactionCount(capacity int32, compactionCount int32) *BitSet {
 	result := &BitSet{
 		compactionCount: compactionCount,
 	}
@@ -255,12 +299,13 @@ func NewWithSizeAndCompactionCount(capacity int32, compactionCount int32) *BitSe
  *              or equal to Integer.MAX_VALUE
  * @since       1.6
  */
-func (this *BitSet) andValue(i int32, value bool) {
+//public void and(int i, boolean value) throws IndexOutOfBoundsException
+func (this *BitSet) AndBit(i int32, value bool) {
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
 	}
 	if !value {
-		this.clear(i)
+		this.Clear(i)
 	}
 }
 
@@ -280,7 +325,8 @@ func (this *BitSet) andValue(i int32, value bool) {
  *              or <code>i</code> is larger than <code>j</code>
  * @since       1.6
  */
-func (this *BitSet) andBitsetInRange(i, j int32, b *BitSet) {
+//public void and(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
+func (this *BitSet) AndRangeBitSet(i, j int32, b *BitSet) {
 	this.setScanner(i, j, b, andStrategy)
 }
 
@@ -294,7 +340,8 @@ func (this *BitSet) andBitsetInRange(i, j int32, b *BitSet) {
  * @param       b a SparseBitSet
  * @since       1.6
  */
-func (this *BitSet) andBitSet(b *BitSet) {
+//    public void and(SparseBitSet b)
+func (this *BitSet) AndBitSet(b *BitSet) {
 	{
 		bmin := len(this.bits)
 		if len(b.bits) < bmin {
@@ -312,24 +359,23 @@ func (this *BitSet) andBitSet(b *BitSet) {
 }
 
 /**
-  *  Performs a logical <b>AND</b> of the two given <code>SparseBitSet</code>s.
-  *  The returned <code>SparseBitSet</code> is created so that each bit in it
-  *  has the value <code>true</code> if and only if both the given sets
-  *  initially had the corresponding bits <code>true</code>, otherwise
-  *  <code>false</code>.
-  *
-  * @param       a a SparseBitSet
-  * @param       b another SparseBitSet
-  * @return      a new SparseBitSet representing the <b>AND</b> of the two sets
-  * @since       1.6
- //TODO:
- public static SparseBitSet and(SparseBitSet a, SparseBitSet b)
- {
-	 final SparseBitSet result = a.clone();
-	 result.and(b);
-	 return result;
- }
-*/
+ *  Performs a logical <b>AND</b> of the two given <code>SparseBitSet</code>s.
+ *  The returned <code>SparseBitSet</code> is created so that each bit in it
+ *  has the value <code>true</code> if and only if both the given sets
+ *  initially had the corresponding bits <code>true</code>, otherwise
+ *  <code>false</code>.
+ *
+ * @param       a a SparseBitSet
+ * @param       b another SparseBitSet
+ * @return      a new SparseBitSet representing the <b>AND</b> of the two sets
+ * @since       1.6
+ */
+//public static SparseBitSet and(SparseBitSet a, SparseBitSet b)
+func And(a, b *BitSet) *BitSet {
+	result := a.clone()
+	result.AndBitSet(b)
+	return result
+}
 
 /**
  *  Performs a logical <b>AndNOT</b> of the addressed target bit with the
@@ -343,12 +389,13 @@ func (this *BitSet) andBitSet(b *BitSet) {
  *              or equal to Integer.MAX_VALUE
  * @since       1.6
  */
-func (this *BitSet) andNotValue(i int32, value bool) {
+//public void andNot(int i, boolean value)
+func (this *BitSet) AndNotBit(i int32, value bool) {
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
 	}
 	if value {
-		this.clear(i)
+		this.Clear(i)
 	}
 }
 
@@ -368,7 +415,8 @@ func (this *BitSet) andNotValue(i int32, value bool) {
  *              or <code>i</code> is larger than <code>j</code>
  * @since       1.6
  */
-func (this *BitSet) andNotBitSetInRange(i, j int32, b *BitSet) {
+//    public void andNot(int i, int j, SparseBitSet b)
+func (this *BitSet) AndNotRangeBitSet(i, j int32, b *BitSet) {
 	this.setScanner(i, j, b, andNotStrategy)
 }
 
@@ -382,7 +430,8 @@ func (this *BitSet) andNotBitSetInRange(i, j int32, b *BitSet) {
  * @param       b the SparseBitSet with which to mask this SparseBitSet
  * @since       1.6
  */
-func (this *BitSet) andNot(b *BitSet) {
+//    public void andNot(SparseBitSet b)
+func (this *BitSet) AndNotBitSet(b *BitSet) {
 	bmin := this.bitsLength
 	if b.bitsLength < bmin {
 		bmin = b.bitsLength
@@ -402,7 +451,7 @@ func (this *BitSet) andNot(b *BitSet) {
  *              or equal to Integer.MAX_VALUE
  * @since       1.6
  */
-func (this *BitSet) GetValue(i int32) bool {
+func (this *BitSet) GetBit(i int32) bool {
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
 	}
@@ -434,13 +483,12 @@ func (this *BitSet) GetValue(i int32) bool {
  *              <code>i</code> is larger than <code>j</code>
  * @since       1.6
  */
-/*
-	 public SparseBitSet get(int i, int j) throws IndexOutOfBoundsException
-	 {
-		 final SparseBitSet result = new SparseBitSet(j, compactionCount);
-		 result.setScanner(i, j, this, copyStrategy);
-		 return result;
-	 }*/
+
+func (this *BitSet) GetBitSetFromRange(i, j int32) *BitSet {
+	result := newWithSizeAndCompactionCount(j, this.compactionCount)
+	result.setScanner(i, j, this, copyStrategy)
+	return result
+}
 
 /**
  *  Returns a hash code value for this bit set. The hash code depends only on
@@ -499,8 +547,7 @@ func (this *BitSet) GetValue(i int32) bool {
  {
 	 setScanner(i, j, b, intersectsStrategy);
 	 return intersectsStrategy.result;
- }
-*/
+ }*/
 /**
  *  Returns true if the specified <code>SparseBitSet</code> has any bits set to
  *  <code>true</code> that are also set to <code>true</code> in this
@@ -524,11 +571,10 @@ func (this *BitSet) GetValue(i int32) bool {
  * @return      the boolean indicating whether this SparseBitSet is empty
  * @since       1.6
  */
-/*public boolean isEmpty()
- {
-	 statisticsUpdate();
-	 return cache.cardinality == 0;
- } */
+func (this *BitSet) isEmpty() bool {
+	this.statisticsUpdate()
+	return this.cache.cardinality == 0
+}
 
 /**
  *  Returns the "logical length" of this <code>SparseBitSet</code>: the index
@@ -538,9 +584,24 @@ func (this *BitSet) GetValue(i int32) bool {
  * @return      the logical length of this SparseBitSet
  * @since       1.6
  */
-func (this *BitSet) length() int32 {
+func (this *BitSet) Length() int32 {
 	this.statisticsUpdate()
 	return this.cache.length
+}
+
+/**
+ *  Returns the number of bits of space nominally in use by this
+ *  <code>SparseBitSet</code> to represent bit values. The count of bits in
+ *  the set is the (label of the last set bit) + 1 - (the label of the first
+ *  set bit).
+ *
+ * @return      the number of bits (true and false) nominally in this bit set
+ *              at this moment
+ * @since       1.6
+ */
+func (this *BitSet) Size() int32 {
+	this.statisticsUpdate()
+	return this.cache.size
 }
 
 /**
@@ -552,7 +613,7 @@ func (this *BitSet) length() int32 {
  * @exception   IndexOutOfBoundsException if the specified index is negative
  * @since       1.6
  */
-func (this *BitSet) nextClearBit(i int32) int32 {
+func (this *BitSet) NextClearBit(i int32) int32 {
 	/*  The index of this method is permitted to be Integer.MAX_VALUE, as this
 	is needed to make this method work together with the method
 	nextSetBit()--as might happen if a search for the next clear bit is
@@ -641,7 +702,7 @@ func (this *BitSet) nextClearBit(i int32) int32 {
  * @since       1.6
  */
 
-func (this *BitSet) nextSetBit(i int32) int32 {
+func (this *BitSet) NextSetBit(i int32) int32 {
 	/*  The index value (i) of this method is permitted to be Integer.MAX_VALUE,
 	as this is needed to make the loop defined above work: just in case the
 	bit labelled Integer.MAX_VALUE-1 is set. This case is not optimised:
@@ -713,7 +774,7 @@ func (this *BitSet) nextSetBit(i int32) int32 {
  *              or equal to Integer.MAX_VALUE
  * @since       1.6
  */
-func (this *BitSet) set(i int32) {
+func (this *BitSet) Set(i int32) {
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException(i=%v)", i))
 	}
@@ -748,11 +809,11 @@ func (this *BitSet) set(i int32) {
  *              or equal to Integer.MAX_VALUE
  * @since       1.6
  */
-func (this *BitSet) SetValue(i int32, value bool) {
+func (this *BitSet) SetBit(i int32, value bool) {
 	if value {
-		this.set(i)
+		this.Set(i)
 	} else {
-		this.clear(i)
+		this.Clear(i)
 	}
 }
 
@@ -767,8 +828,28 @@ func (this *BitSet) SetValue(i int32, value bool) {
  *              <code>i</code> is larger than <code>j</code>.
  * @since       1.6
  */
-func (this *BitSet) setRange(i, j int32) {
+func (this *BitSet) SetRange(i, j int32) {
 	this.setScanner(i, j, nil, setStrategy)
+}
+
+/**
+ *  Sets the bits from the specified <code>i</code> (inclusive) to the specified
+ *  <code>j</code> (exclusive) to the specified value.
+ *
+ * @param       i index of the first bit to be set
+ * @param       j index after the last bit to be set
+ * @param       value to which to set the selected bits
+ * @exception   IndexOutOfBoundsException if <code>i</code> is negative or is
+ *              equal to Integer.MAX_VALUE, or <code>j</code> is negative, or
+ *              <code>i</code> is larger than <code>j</code>
+ * @since       1.6
+ */
+func (this *BitSet) SetRangeBit(i, j int32, value bool) {
+	if value {
+		this.SetRange(i, j)
+	} else {
+		this.ClearRange(i, j)
+	}
 }
 
 /**
@@ -779,7 +860,7 @@ func (this *BitSet) setRange(i, j int32) {
  *              or equal to Integer.MAX_VALUE.
  * @since       1.6
  */
-func (this *BitSet) clear(i int32) {
+func (this *BitSet) Clear(i int32) {
 	/*  In the interests of speed, no check is made here on whether the
 	level3 block goes to all zero. This may be found and corrected
 	in some later operation. */
@@ -813,7 +894,7 @@ func (this *BitSet) clear(i int32) {
  *              or <code>i</code> is larger than <code>j</code>
  * @since       1.6
  */
-func (this *BitSet) clearInRange(i, j int32) {
+func (this *BitSet) ClearRange(i, j int32) {
 	this.setScanner(i, j, nil, clearStrategy)
 }
 
@@ -826,6 +907,44 @@ func (this *BitSet) clearInRange(i, j int32) {
 func (this *BitSet) clearAll() {
 	/*  This simply resets to null all the entries in the set. */
 	this.nullify(0)
+}
+
+/**
+ *  Cloning this <code>SparseBitSet</code> produces a new
+ *  <code>SparseBitSet</code> that is <i>equal</i>() to it. The clone of the
+ *  bit set is another bit set that has exactly the same bits set to
+ *  <code>true</code> as this bit set.
+ *  <p>
+ *  Note: the actual space allocated to the clone tries to minimise the actual
+ *  amount of storage allocated to hold the bits, while still trying to
+ *  keep access to the bits being a rapid as possible. Since the space
+ *  allocated to a <code>SparseBitSet</code> is not normally decreased,
+ *  replacing a bit set by its clone may be a way of both managing memory
+ *  consumption and improving the rapidity of access.
+ *
+ * @return      a clone of this SparseBitSet
+ * @since       1.6
+ */
+//public SparseBitSet clone()
+func (this *BitSet) clone() (result *BitSet) {
+	result = new(BitSet)
+
+	reflect.Copy(reflect.ValueOf(*result), reflect.ValueOf(*this))
+
+	/*  Clear out the shallow copy of the set array (which contains just
+	copies of the references from this set), and then replace these
+	by a deep copy (created by a "copy" from the set being cloned . */
+	result.bits = nil
+	result.resize(1)
+	/*  Ensure the clone is not sharing a copy of a spare block with
+	the cloned set, nor the cache set, nor any of the visitors (which
+	are linked to their parent object) (Not all visitors actually use
+	this link to their containing object, but they are reset here just
+	in case of  future changes). */
+	result.constructorHelper()
+	result.equalsStrategy = nil
+	result.setScanner(0, this.bitsLength, this, copyStrategy)
+	return result
 }
 
 func highestOneBit(x int32) (result int32) {
@@ -912,20 +1031,20 @@ func (this *BitSet) resize(index int32) {
  */
 func (this BitSet) String() string {
 	var p string = "{"
-	i := this.nextSetBit(0)
+	i := this.NextSetBit(0)
 	/*  Loop so long as there is another bit to append to the String. */
 	for i >= 0 {
 		/*  Append that next bit */
 		p += fmt.Sprintf("%v", i)
 		/*  Find the position of the next bit to show. */
-		j := this.nextSetBit(i + 1)
+		j := this.NextSetBit(i + 1)
 		if this.compactionCount > 0 {
 			/*  Give up if there is no next bit to show. */
 			if j < 0 {
 				break
 			}
 			/*  Find the next clear bit is after the current bit, i.e., i */
-			last := this.nextClearBit(i)
+			last := this.NextClearBit(i)
 			/*  Compute the position of the next clear bit after the current
 			subsequence of set bits. */
 			if last < 0 {
@@ -937,7 +1056,7 @@ func (this BitSet) String() string {
 				p += fmt.Sprintf("..%v", last-1)
 				/*  Having accounted for a subsequence of bits that are all set,
 				recompute the label of the next bit to show. */
-				j = this.nextSetBit(last)
+				j = this.NextSetBit(last)
 			}
 		}
 		/*  If there is another set bit, put a comma and a space after the
@@ -951,28 +1070,6 @@ func (this BitSet) String() string {
 	/*  Terminate the representational String, and return it. */
 	p += "}"
 	return p
-}
-
-func (this *BitSet) nullify(start int32) {
-	aLength := int32(len(this.bits))
-	if start < aLength {
-		for w := start; w != aLength; w++ {
-			this.bits[w] = nil
-		}
-		this.cache.hash = 0 //  Invalidate size, etc., values
-	}
-}
-
-/**
- *  Intializes all the additional objects required for correct operation.
- *
- * @since       1.6
- */
-func (this *BitSet) constructorHelper() {
-	this.spare = make(b1DimType, LENGTH3)
-	this.cache = new(cacheType)
-	this.updateStrategy = new(updateStrategyType)
-	this.updateStrategy.cache = this.cache
 }
 
 //==============================================================================
@@ -1008,6 +1105,28 @@ func (this *BitSet) throwIndexOutOfBoundsException(i, j uint32) {
 		s += fmt.Sprintf("(i=%v) > (j=%v)", i, j)
 	}
 	panic(s)
+}
+
+func (this *BitSet) nullify(start int32) {
+	aLength := int32(len(this.bits))
+	if start < aLength {
+		for w := start; w != aLength; w++ {
+			this.bits[w] = nil
+		}
+		this.cache.hash = 0 //  Invalidate size, etc., values
+	}
+}
+
+/**
+ *  Intializes all the additional objects required for correct operation.
+ *
+ * @since       1.6
+ */
+func (this *BitSet) constructorHelper() {
+	this.spare = make(b1DimType, LENGTH3)
+	this.cache = new(cacheType)
+	this.updateStrategy = new(updateStrategyType)
+	this.updateStrategy.cache = this.cache
 }
 
 /**
@@ -1301,10 +1420,101 @@ func (this *BitSet) statisticsUpdate() {
 	this.setScanner(0, this.bitsLength, nil, this.updateStrategy)
 }
 
+/**
+ *  Returns the number of bits set to <code>true</code> in this
+ *  <code>SparseBitSet</code>.
+ *
+ * @return      the number of bits set to true in this SparseBitSet
+ * @since       1.6
+ */
+
 func (this *BitSet) Cardinality() int32 {
 	this.statisticsUpdate() // Update size, cardinality and length values
 	return this.cache.cardinality
 }
+
+
+
+ /**
+     *  Convenience method for statistics if the individual results are not needed.
+     *
+     * @return      a String detailing the statistics of the bit set
+     * @see         #statistics(String[])
+     * @since       1.6
+     */
+	 func (this *BitSet) StatisticsAll() string{
+		 return this.Statistics(nil);
+	 }
+ 
+	 /**
+	  *  Determine, and create a String with the bit set statistics. The statistics
+	  *  include: Size, Length, Cardinality, Total words (<i>i.e.</i>, the total
+	  *  number of 64-bit "words"), Set array length (<i>i.e.</i>, the number of
+	  *  references that can be held by the top level array, Level2 areas in use,
+	  *  Level3 blocks in use,, Level2 pool size, Level3 pool size, and the
+	  *  Compaction count.
+	  *  <p>
+	  *  This method is intended for diagnostic use (as it is relatively expensive
+	  *  in time), but can be useful in understanding an application's use of a
+	  *  <code>SparseBitSet</code>.
+	  *
+	  * @param       values an array for the individual results (if not null)
+	  * @return      a String detailing the statistics of the bit set
+	  * @since       1.6
+	  */
+	  func (this *BitSet) Statistics( values []string) string{
+		 this.statisticsUpdate(); //  Ensure statistics are up-to-date
+		 v := make([]string, Statistics_Values_Length)
+		 /*  Assign the statistics values to the appropriate entry. The order
+			 of the assignments does not matter--the ordinal serves to get the
+			 values into the matching order with the labels from the enumeration. */
+		 v[Statistics.Size] = strconv.Itoa(this.size());
+		 v[Statistics.Length] = strconv.Itoa(this.length());
+		 v[Statistics.Cardinality] = strconv.Itoa(this.cardinality());
+		 v[Statistics.Total_words] = strconv.Itoa(this.cache.count);
+		 v[Statistics.Set_array_length] = strconv.Itoa(len(this.bits));
+		 v[Statistics.Set_array_max_length] = strconv.Itoa(MAX_LENGTH1);
+		 v[Statistics.Level2_areas] = strconv.Itoa(cache.a2Count);
+		 v[Statistics.Level2_area_length] =strconv.Itoa(LENGTH2);
+		 v[Statistics.Level3_blocks] = strconv.Itoa(cache.a3Count);
+		 v[Statistics.Level3_block_length] = strconv.Itoa(LENGTH3);
+		 v[Statistics.Compaction_count_value] = Integer.toString(compactionCount);
+ 
+		 /*  Determine the longest label, so that the equal signs may be lined-up. */
+		 int longestLabel = 0;
+		 for (Statistics s : Statistics.values())
+			 longestLabel =
+					 Math.max(longestLabel, s.name().length());
+ 
+		 /*  Build a String that has for each statistic, the name of the statistic,
+			 padding, and equals sign, and the value. The "Load_factor_value",
+			 "Average_length_value", and "Average_chain_length" are printed as
+			 floating point values. */
+		 final StringBuilder result = new StringBuilder();
+		 for (Statistics s : Statistics.values())
+		 {
+			 result.append(s.name()); // The name of the statistic
+			 for (int i = 0; i != longestLabel - s.name().length(); ++i)
+				 result.append(' '); //  Fill out the field
+			 result.append(" = "); //  Show an equals sign
+			 result.append(v[s.ordinal()]); // and a value
+			 result.append('\n');
+		 }
+		 /*  Remove the underscores. */
+		 for (int i = 0; i != result.length(); ++i)
+			 if (result.charAt(i) == '_')
+				 result.setCharAt(i, ' ');
+ 
+		 if (values != null)
+		 {
+			 final int len = Math.min(values.length, v.length);
+			 System.arraycopy(v, 0, values, 0, len);
+		 }
+		 return result.toString();
+	 }
+
+	 
+
 
 //=============================================================================
 //  Statistics enumeration
@@ -1324,13 +1534,13 @@ func (this *BitSet) Cardinality() int32 {
  *
  * @see         #statistics(String[])
  */
-type statistics int
+type StatisticsType int
 
 const (
 	/**
 	 *  The size of the bit set, as give by the <i>size</i>() method.
 	 */
-	Size statistics = iota // 0
+	Size StatisticsType = iota // 0
 	/**
 	 *  The length of the bit set, as give by the <i>length</i>() method.
 	 */
@@ -1374,6 +1584,8 @@ const (
 	 * @see         #toStringCompaction(int)
 	 */
 	Compaction_count_value // 10
+	//
+	Statistics_Values_Length
 )
 
 //=============================================================================

@@ -1,0 +1,369 @@
+/*main class*/
+J:public class SparseBitSet implements Cloneable, Serializable
+G::type BitSet struct 
+
+
+
+/*static members*/
+J:static int compactionCountDefault = 2;
+G::const compactionCountDefault int32 = 2
+
+J:protected static final int LENGTH4 = Long.SIZE;
+G::const LENGTH4 int32 = 64 //Long.SIZE
+
+J:protected static final int INDEX_SIZE = Integer.SIZE - 1;
+G::const INTEGER_SIZE = 32  //Integer.SIZE
+G::const INDEX_SIZE uint32 = INTEGER_SIZE - 1 //Integer.SIZE - 1;
+
+J:protected static final int LEVEL4 = 6;
+G::const LEVEL4 uint32 = 6
+
+J:protected static final int LEVEL3 = 5; 
+G::const LEVEL3 uint32 = 5
+
+J:protected static final int LEVEL2 = 5; 
+G::const LEVEL2 uint32 = 5
+
+J:protected static final int LEVEL1 = INDEX_SIZE - LEVEL2 - LEVEL3 - LEVEL4;
+G::const LEVEL1 = INDEX_SIZE - LEVEL2 - LEVEL3 - LEVEL4
+
+J:protected static final int MAX_LENGTH1 = 1 << LEVEL1;
+G::const MAX_LENGTH1 int32 = 1 << uint(LEVEL1)
+
+J:protected static final int LENGTH2 = 1 << LEVEL2;
+G::const LENGTH2 int32 = 1 << uint(LEVEL2)
+
+J:protected static final int LENGTH3 = 1 << LEVEL3;
+G::const LENGTH3 int32 = 1 << uint(LEVEL3)
+
+J:protected static final int SHIFT3 = LEVEL4;
+G::const SHIFT3 uint32 = LEVEL4
+
+J:protected static final int MASK3 = LENGTH3 - 1;
+G::const MASK3 int32 = int32(LENGTH3 - 1)
+
+J:protected static final int SHIFT2 = LEVEL3;
+G::const SHIFT2 uint32 = LEVEL3   
+
+J:protected static final int UNIT = LENGTH2 * LENGTH3 * LENGTH4;
+G::const UNIT int32 = LENGTH2 * LENGTH3 * LENGTH4
+
+J:protected static final int MASK2 = LENGTH2 - 1;
+G::const MASK2 int32 = int32(LENGTH2 - 1)
+
+J:protected static final int SHIFT1 = LEVEL2 + LEVEL3;
+G::const SHIFT1 uint32 = LEVEL2 + LEVEL3
+
+J:protected static final int LENGTH2_SIZE = LENGTH2 - 1;
+G::const LENGTH2_SIZE int32 = int32(LENGTH2 - 1)
+
+J:protected static final int LENGTH3_SIZE = LENGTH3 - 1;
+G::const LENGTH3_SIZE int32 = int32(LENGTH3 - 1)
+
+J:protected static final int LENGTH4_SIZE = LENGTH4 - 1;
+G::const LENGTH4_SIZE int32 = int32(LENGTH4 - 1)
+
+J:static final long[] ZERO_BLOCK = new long[LENGTH3];
+G::var ZERO_BLOCK = make(b1DimType, LENGTH3)
+
+
+J:protected transient int compactionCount;
+G::BitSet -> compactionCount int32
+
+J:protected transient long[][][] bits;
+G::BitSet -> bits b3DimType
+
+J:protected transient int bitsLength;
+G::BitSet -> bitsLength int32
+  
+J:protected transient Cache cache;
+G::BitSet -> cache *cacheType
+
+J:protected transient long[] spare;
+G::BitSet -> spare b1DimType
+
+
+
+
+/*static methods*/
+J:public static SparseBitSet and(SparseBitSet a, SparseBitSet b)
+G::func And(a, b *BitSet) *BitSet 
+
+J:public static SparseBitSet andNot(SparseBitSet a, SparseBitSet b)
+J:public static SparseBitSet xor(SparseBitSet a, SparseBitSet b)
+J:public static SparseBitSet or(SparseBitSet a, SparseBitSet b)
+J:protected static void throwIndexOutOfBoundsException(int i, int j) throws IndexOutOfBoundsException
+
+
+/*Constructors*/
+J:protected SparseBitSet(int capacity, int compactionCount) throws NegativeArraySizeException
+G::func newWithSizeAndCompactionCount(capacity int32, compactionCount int32) *BitSet
+
+J:public SparseBitSet()
+G::func New() *BitSet
+
+J:public SparseBitSet(int nbits) throws NegativeArraySizeException
+G::func NewWithSize(capacity uint32) *BitSet 
+
+
+
+/*class methods*/
+J:public void and(int i, boolean value) throws IndexOutOfBoundsException
+G::func (this *BitSet) AndBit(i int32, value bool) 
+
+J:public void and(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
+G::func (this *BitSet) AndRangeBitSet(i, j int32, b *BitSet) 
+
+J:public void and(SparseBitSet b)
+G::func (this *BitSet) AndBitSet(b *BitSet)
+
+
+J:public void andNot(int i, boolean value)
+G::func (this *BitSet) AndNotBit(i int32, value bool) 
+
+J:public void andNot(int i, int j, SparseBitSet b)throws IndexOutOfBoundsException
+G::func (this *BitSet) AndNotRangeBitSet(i, j int32, b *BitSet) 
+
+J:public void andNot(SparseBitSet b)
+G::func (this *BitSet) AndNotBitSet(b *BitSet) 
+
+
+J:public int cardinality()
+G:func (this *BitSet) Cardinality() int32
+
+J:public void clear(int i)
+G::func (this *BitSet) Clear(i int32) {
+
+J:public void clear(int i, int j) throws IndexOutOfBoundsException
+G::func (this *BitSet) ClearRange(i, j int32) 
+
+J:public void clear()
+G::func (this *BitSet) clearAll()
+
+J:public SparseBitSet clone()
+G:func (this *BitSet) clone() (result *BitSet) 
+
+J:public int hashCode()
+J:public boolean equals(Object obj)
+
+J:public void flip(int i)
+J:public void flip(int i, int j) throws IndexOutOfBoundsException
+
+J:public boolean get(int i)
+G::func (this *BitSet) GetBit(i int32) bool
+
+J:public SparseBitSet get(int i, int j) throws IndexOutOfBoundsException
+G:func (this *BitSet) GetBitSetFromRange(i, j int32) *BitSet
+
+
+J:public boolean intersects(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
+J:public boolean intersects(SparseBitSet b)
+
+J:public boolean isEmpty()
+G::func (this *BitSet) isEmpty() bool
+
+J:public int length()
+G:func (this *BitSet) Length() int32
+
+J:public int nextClearBit(int i)
+G:func (this *BitSet) NextClearBit(i int32) int32 
+
+J:public int nextSetBit(int i)
+G:func (this *BitSet) NextSetBit(i int32) int32
+
+
+J:public int previousClearBit(int i)
+J:public int previousSetBit(int i)
+
+J:public void or(int i, boolean value)
+J:public void or(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
+J:public void or(SparseBitSet b)
+
+J:public void set(int i)
+G:func (this *BitSet) Set(i int32) 
+
+J:public void set(int i, boolean value)
+G:func (this *BitSet) SetBit(i int32, value bool) {
+
+J:public void set(int i, int j) throws IndexOutOfBoundsException
+G:func (this *BitSet) SetRange(i, j int32) 
+
+J:public void set(int i, int j, boolean value)
+G:func (this *BitSet) SetRangeBit(i, j int32, value bool) {
+
+J:public int size()
+G:func (this *BitSet) Size() int32 {
+
+J:public String statistics()
+G:func (this *BitSet) StatisticsAll() string
+
+J:public String statistics(String[] values)
+G:func (this *BitSet) Statistics( values []string) string
+
+J:public String toString()
+G:func (this BitSet) String() string
+
+
+J:public void toStringCompaction(int count)
+J:public void toStringCompaction(boolean change)
+
+J:public void xor(int i, boolean value)
+J:public void xor(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
+J:public void xor(SparseBitSet b)
+
+J:protected final void constructorHelper()
+G:func (this *BitSet) constructorHelper()
+
+J:protected final void nullify(int start)
+G:func (this *BitSet) nullify(start int32)
+
+J:protected final void resize(int index)
+G:func (this *BitSet) resize(index int32) 
+
+J:protected final void setScanner(int i, int j, SparseBitSet b, AbstractStrategy op) throws IndexOutOfBoundsException
+G:func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger)
+
+J:protected final void statisticsUpdate()
+G:func (this *BitSet) statisticsUpdate()
+
+J:private void writeObject(ObjectOutputStream s) throws IOException, InternalError
+J:private void readObject(ObjectInputStream s) throws IOException,ClassNotFoundException
+
+
+
+J:public enum Statistics
+G::type StatisticsType int
+
+J:protected class Cache
+G::type cacheType struct
+
+J:protected transient int hash;
+G::cacheType -> hash uint64
+
+J:protected transient int size;
+G::cacheType -> size int32
+
+J:protected transient int cardinality;
+G::cacheType -> cardinality int32
+
+J:protected transient int length;
+G::cacheType -> length int32
+
+J:protected transient int count;
+G::cacheType -> count int32
+
+J:protected transient int a2Count;
+G::cacheType -> a2Count int32
+
+J:protected transient int a3Count;
+G::cacheType -> a3Count int32
+
+
+
+
+
+J:protected abstract static class AbstractStrategy
+G::type strateger interface
+
+J:static final int F_OP_F_EQ_F = 0x1;
+G::const F_OP_F_EQ_F = 0x1
+
+J:static final int F_OP_X_EQ_F = 0x2;
+G::const F_OP_X_EQ_F = 0x2
+
+J:static final int X_OP_F_EQ_F = 0x4;
+G::const X_OP_F_EQ_F = 0x4
+
+J:static final int X_OP_F_EQ_X = 0x8;
+G::const X_OP_F_EQ_X = 0x8
+
+J:protected abstract int properties();
+G::strateger -> func properties() int32
+
+J:protected abstract boolean start(SparseBitSet b);
+G::strateger -> func start(*BitSet) bool
+
+J:protected abstract boolean word(int base, int u3, long[] a3, long[] b3, long mask);
+G::strateger -> func word(base, u3 int32, a3, b3 b1DimType, mask wordType) bool
+
+J:protected abstract boolean block(int base, int u3, int v3, long[] a3, long[] b3);
+G::strateger -> func block(base, u3, v3 int32, a3, b3 b1DimType) bool
+
+J:protected void finish(int a2Count, int a3Count){ }
+G::strateger -> func finish(a2Count, a3Count int32)
+
+J:protected final boolean isZeroBlock(long[] a3)
+G::func isZeroBlock(a3 b1DimType) bool 
+
+
+J:protected static class AndStrategy extends AbstractStrategy
+G::type andStrategyType struct
+
+J:protected static class AndNotStrategy extends AbstractStrategy
+G::type andNotStrategyType struct
+
+J:protected static class ClearStrategy extends AbstractStrategy
+G::type clearStrategyType struct
+
+J:protected static class CopyStrategy extends AbstractStrategy
+G::type copyStrategyType struct
+
+J:protected static class EqualsStrategy extends AbstractStrategy
+G::type equalsStrategyType struct
+
+J:protected static class FlipStrategy extends AbstractStrategy
+G::type flipStrategyType struct
+
+J:protected static class IntersectsStrategy extends AbstractStrategy
+G::type intersectsStrategyType struct
+
+J:protected static class OrStrategy extends AbstractStrategy
+G::type orStrategyType struct
+
+J:protected static class SetStrategy extends AbstractStrategy
+G::type setStrategyType struct
+
+J:protected class UpdateStrategy extends AbstractStrategy
+G::type updateStrategyType struct
+
+J:protected static class XorStrategy extends AbstractStrategy
+G::type xorStrategyType struct
+
+
+
+
+
+J:protected static final transient AndStrategy andStrategy = new AndStrategy();
+G::var andStrategy = new(andStrategyType)
+
+J:protected static final transient AndNotStrategy andNotStrategy = new AndNotStrategy();
+G::var andNotStrategy = new(andNotStrategyType)
+
+J:protected static final transient ClearStrategy clearStrategy = new ClearStrategy();
+G::var clearStrategy = new(clearStrategyType)
+
+J:protected static final transient CopyStrategy copyStrategy = new CopyStrategy();
+G::var copyStrategy = new(copyStrategyType)
+
+J:protected transient EqualsStrategy equalsStrategy;
+G::BitSet -> equalsStrategy *equalsStrategyType
+
+J:protected static final transient FlipStrategy flipStrategy = new FlipStrategy();
+G::var flipStrategy = new(flipStrategyType)
+
+J:protected static transient IntersectsStrategy intersectsStrategy = new IntersectsStrategy();
+G::var intersectsStrategy = new(intersectsStrategyType)
+
+J:protected static final transient OrStrategy orStrategy = new OrStrategy();
+G::var orStrategy = new(orStrategyType)
+
+J:protected static final transient SetStrategy setStrategy = new SetStrategy();
+G::var setStrategy = new(setStrategyType)
+
+J:protected transient UpdateStrategy updateStrategy;
+G::BitSet -> updateStrategy *updateStrategyType
+
+J:protected static final transient XorStrategy xorStrategy = new XorStrategy();
+G::var xorStrategy = new(xorStrategyType)
+
+
