@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/bits"
 	"reflect"
+	"strconv"
 )
 
 type wordType uint64
@@ -438,6 +439,71 @@ func (this *BitSet) AndNotBitSet(b *BitSet) {
 	}
 	this.setScanner(0, bmin, b, andNotStrategy)
 }
+
+/**
+ *  Sets the bit at the specified index to the complement of its current value.
+ *
+ * @param       i the index of the bit to flip
+ * @exception   IndexOutOfBoundsException if the specified index is negative
+ *              or equal to Integer.MAX_VALUE
+ * @since       1.6
+ */
+func (this *BitSet) FlipBit(i int32) {
+	if (i + 1) < 1 {
+		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
+	}
+	w := i >> SHIFT3
+	w1 := w >> SHIFT1
+	w2 := (w >> SHIFT2) & MASK2
+
+	if i >= this.bitsLength {
+		this.resize(i)
+	}
+
+	var a2 b2DimType
+	var a3 b1DimType
+	if a2 = this.bits[w1]; a2 == nil {
+		a2 = make(b2DimType, LENGTH2)
+		a3 = make(b1DimType, LENGTH3)
+		a2[w2] = a3
+	} else {
+		if a3 = a2[w2]; a3 == nil {
+			a3 = make(b1DimType, LENGTH3)
+			a2[w2] = a3
+		}
+	}
+	a3[(w & MASK3)] = a3[(w&MASK3)] ^ wordType(bits.RotateLeft(uint(1), int(i))) //Flip the designated bit
+	this.cache.hash = 0                                                          //  Invalidate size, etc., values
+}
+
+/**
+ *  Sets each bit from the specified <code>i</code> (inclusive) to the
+ *  specified <code>j</code> (exclusive) to the complement of its current
+ *  value.
+ *
+ * @param       i index of the first bit to flip
+ * @param       j index after the last bit to flip
+ * @exception   IndexOutOfBoundsException if <code>i</code> is negative or is
+ *              equal to Integer.MAX_VALUE, or <code>j</code> is negative, or
+ *              <code>i</code> is larger than <code>j</code>
+ * @since       1.6
+ */
+func (this *BitSet) FlipRange(i, j int32) {
+	this.setScanner(i, j, nil, flipStrategy)
+}
+
+/**
+ *  Returns the value of the bit with the specified index. The value is
+ *  <code>true</code> if the bit with the index <code>i</code> is currently set
+ *  in this <code>SparseBitSet</code>; otherwise, the result is
+ *  <code>false</code>.
+ *
+ * @param       i the bit index
+ * @return      the boolean value of the bit with the specified index.
+ * @exception   IndexOutOfBoundsException if the specified index is negative
+ *              or equal to Integer.MAX_VALUE
+ * @since       1.6
+ */
 
 /**
  *  Returns the value of the bit with the specified index. The value is
@@ -1433,88 +1499,69 @@ func (this *BitSet) Cardinality() int32 {
 	return this.cache.cardinality
 }
 
+/**
+ *  Convenience method for statistics if the individual results are not needed.
+ *
+ * @return      a String detailing the statistics of the bit set
+ * @see         #statistics(String[])
+ * @since       1.6
+ */
+func (this *BitSet) StatisticsAll() string {
+	return this.Statistics(nil)
+}
 
+/**
+ *  Determine, and create a String with the bit set statistics. The statistics
+ *  include: Size, Length, Cardinality, Total words (<i>i.e.</i>, the total
+ *  number of 64-bit "words"), Set array length (<i>i.e.</i>, the number of
+ *  references that can be held by the top level array, Level2 areas in use,
+ *  Level3 blocks in use,, Level2 pool size, Level3 pool size, and the
+ *  Compaction count.
+ *  <p>
+ *  This method is intended for diagnostic use (as it is relatively expensive
+ *  in time), but can be useful in understanding an application's use of a
+ *  <code>SparseBitSet</code>.
+ *
+ * @param       values an array for the individual results (if not null)
+ * @return      a String detailing the statistics of the bit set
+ * @since       1.6
+ */
+func (this *BitSet) Statistics(values []string) string {
+	this.statisticsUpdate() //  Ensure statistics are up-to-date
+	v := make([]string, Statistics_Values_Length)
+	/*  Assign the statistics values to the appropriate entry. The order
+	of the assignments does not matter--the ordinal serves to get the
+	values into the matching order with the labels from the enumeration. */
+	v[Size] = strconv.Itoa(int(this.Size()))
+	v[Length] = strconv.Itoa(int(this.Length()))
+	v[Cardinality] = strconv.Itoa(int(this.Cardinality()))
+	v[Total_words] = strconv.Itoa(int(this.cache.count))
+	v[Set_array_length] = strconv.Itoa(len(this.bits))
+	v[Set_array_max_length] = strconv.Itoa(int(MAX_LENGTH1))
+	v[Level2_areas] = strconv.Itoa(int(this.cache.a2Count))
+	v[Level2_area_length] = strconv.Itoa(int(LENGTH2))
+	v[Level3_blocks] = strconv.Itoa(int(this.cache.a3Count))
+	v[Level3_block_length] = strconv.Itoa(int(LENGTH3))
+	v[Compaction_count_value] = strconv.Itoa(int(this.compactionCount))
 
- /**
-     *  Convenience method for statistics if the individual results are not needed.
-     *
-     * @return      a String detailing the statistics of the bit set
-     * @see         #statistics(String[])
-     * @since       1.6
-     */
-	 func (this *BitSet) StatisticsAll() string{
-		 return this.Statistics(nil);
-	 }
- 
-	 /**
-	  *  Determine, and create a String with the bit set statistics. The statistics
-	  *  include: Size, Length, Cardinality, Total words (<i>i.e.</i>, the total
-	  *  number of 64-bit "words"), Set array length (<i>i.e.</i>, the number of
-	  *  references that can be held by the top level array, Level2 areas in use,
-	  *  Level3 blocks in use,, Level2 pool size, Level3 pool size, and the
-	  *  Compaction count.
-	  *  <p>
-	  *  This method is intended for diagnostic use (as it is relatively expensive
-	  *  in time), but can be useful in understanding an application's use of a
-	  *  <code>SparseBitSet</code>.
-	  *
-	  * @param       values an array for the individual results (if not null)
-	  * @return      a String detailing the statistics of the bit set
-	  * @since       1.6
-	  */
-	  func (this *BitSet) Statistics( values []string) string{
-		 this.statisticsUpdate(); //  Ensure statistics are up-to-date
-		 v := make([]string, Statistics_Values_Length)
-		 /*  Assign the statistics values to the appropriate entry. The order
-			 of the assignments does not matter--the ordinal serves to get the
-			 values into the matching order with the labels from the enumeration. */
-		 v[Statistics.Size] = strconv.Itoa(this.size());
-		 v[Statistics.Length] = strconv.Itoa(this.length());
-		 v[Statistics.Cardinality] = strconv.Itoa(this.cardinality());
-		 v[Statistics.Total_words] = strconv.Itoa(this.cache.count);
-		 v[Statistics.Set_array_length] = strconv.Itoa(len(this.bits));
-		 v[Statistics.Set_array_max_length] = strconv.Itoa(MAX_LENGTH1);
-		 v[Statistics.Level2_areas] = strconv.Itoa(cache.a2Count);
-		 v[Statistics.Level2_area_length] =strconv.Itoa(LENGTH2);
-		 v[Statistics.Level3_blocks] = strconv.Itoa(cache.a3Count);
-		 v[Statistics.Level3_block_length] = strconv.Itoa(LENGTH3);
-		 v[Statistics.Compaction_count_value] = Integer.toString(compactionCount);
- 
-		 /*  Determine the longest label, so that the equal signs may be lined-up. */
-		 int longestLabel = 0;
-		 for (Statistics s : Statistics.values())
-			 longestLabel =
-					 Math.max(longestLabel, s.name().length());
- 
-		 /*  Build a String that has for each statistic, the name of the statistic,
-			 padding, and equals sign, and the value. The "Load_factor_value",
-			 "Average_length_value", and "Average_chain_length" are printed as
-			 floating point values. */
-		 final StringBuilder result = new StringBuilder();
-		 for (Statistics s : Statistics.values())
-		 {
-			 result.append(s.name()); // The name of the statistic
-			 for (int i = 0; i != longestLabel - s.name().length(); ++i)
-				 result.append(' '); //  Fill out the field
-			 result.append(" = "); //  Show an equals sign
-			 result.append(v[s.ordinal()]); // and a value
-			 result.append('\n');
-		 }
-		 /*  Remove the underscores. */
-		 for (int i = 0; i != result.length(); ++i)
-			 if (result.charAt(i) == '_')
-				 result.setCharAt(i, ' ');
- 
-		 if (values != null)
-		 {
-			 final int len = Math.min(values.length, v.length);
-			 System.arraycopy(v, 0, values, 0, len);
-		 }
-		 return result.toString();
-	 }
+	/*  Determine the longest label, so that the equal signs may be lined-up. */
+	for i := range values {
+		if i < len(v) {
+			values[i] = v[i]
+		}
+	}
 
-	 
-
+	/*  Build a String that has for each statistic, the name of the statistic,
+	padding, and equals sign, and the value. The "Load_factor_value",
+	"Average_length_value", and "Average_chain_length" are printed as
+	floating point values. */
+	var kvs string
+	for i, s := range values {
+		st := StatisticsType(i)
+		kvs = kvs + st.String() + " = " + s + "\n"
+	}
+	return kvs
+}
 
 //=============================================================================
 //  Statistics enumeration
@@ -1587,6 +1634,35 @@ const (
 	//
 	Statistics_Values_Length
 )
+
+func (st StatisticsType) String() string {
+	switch st {
+	case Size:
+		return "Size"
+	case Length:
+		return "Length"
+	case Cardinality:
+		return "Cardinality"
+	case Total_words:
+		return "Total-words"
+	case Set_array_length:
+		return "Set-array-length"
+	case Set_array_max_length:
+		return "Set-array-max-length"
+	case Level2_areas:
+		return "Level2-areas"
+	case Level2_area_length:
+		return "Level2-area-length"
+	case Level3_blocks:
+		return "Level3-blocks"
+	case Level3_block_length:
+		return "Level3-block-length"
+	case Compaction_count_value:
+		return "Compaction-count-value"
+	default:
+		panic(fmt.Sprintf("Unknown statistics value %v", st))
+	}
+}
 
 //=============================================================================
 //  A set of cached statistics values, recomputed when necessary
