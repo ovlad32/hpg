@@ -147,7 +147,10 @@ J:public int hashCode()
 J:public boolean equals(Object obj)
 
 J:public void flip(int i)
+G:func (this *BitSet) FlipBit(i int32) 
+
 J:public void flip(int i, int j) throws IndexOutOfBoundsException
+func (this *BitSet) FlipRange(i, j int32) 
 
 J:public boolean get(int i)
 G::func (this *BitSet) GetBit(i int32) bool
