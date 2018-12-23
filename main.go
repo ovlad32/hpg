@@ -19,11 +19,13 @@ import (
 //var app *fx.App
 func sparseTest() {
 	sb := sparse.New()
-	sb.SetValue(0, true)
-	sb.SetValue(3, true)
-	sb.SetValue(31, true)
-	sb.SetValue(32, true)
-	sb.SetValue(37, true)
+	sb.SetBit(0, true)
+	sb.SetBit(3, true)
+	sb.SetBit(31, true)
+	sb.SetBit(332, true)
+	sb.SetBit(337, true)
+	sb.SetBit(437, true)
+	sb.SetBit(438, true)
 	fmt.Println(sb.Cardinality())
 	for i := int32(0); i >= 0; i = sb.NextSetBit(i + 1) {
 		fmt.Printf(">%v\n", i)

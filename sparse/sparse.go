@@ -441,6 +441,28 @@ func (this *BitSet) AndNotBitSet(b *BitSet) {
 }
 
 /**
+ *  Creates a bit set from thie first <code>SparseBitSet</code> whose
+ *  corresponding bits are cleared by the set bits of the second
+ *  <code>SparseBitSet</code>. The resulting bit set is created so that a bit
+ *  in it has the value <code>true</code> if and only if the corresponding bit
+ *  in the <code>SparseBitSet</code> of the first is set, and that same
+ *  corresponding bit is not set in the <code>SparseBitSet</code> of the second
+ *  argument.
+ *
+ * @param a     a SparseBitSet
+ * @param b     another SparseBitSet
+ * @return      a new SparseBitSet representing the <b>AndNOT</b> of the
+ *              two sets
+ * @since       1.6
+ */
+//public static SparseBitSet andNot(SparseBitSet a, SparseBitSet b){
+func AndNot(a, b *BitSet) *BitSet {
+	result := a.clone()
+	result.AndNotBitSet(b)
+	return result
+}
+
+/**
  *  Sets the bit at the specified index to the complement of its current value.
  *
  * @param       i the index of the bit to flip
@@ -608,12 +630,12 @@ func (this *BitSet) GetBitSetFromRange(i, j int32) *BitSet {
  *              or <code>i</code> is larger than <code>j</code>
  * @since       1.6
  */
-/* public boolean intersects(int i, int j, SparseBitSet b)
-		 throws IndexOutOfBoundsException
- {
-	 setScanner(i, j, b, intersectsStrategy);
-	 return intersectsStrategy.result;
- }*/
+//public boolean intersects(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException {
+/*func (this *BitSet) IntersectsRangeBitSet(i, j int32, b *BitSet) {
+	this.setScanner(i, j, b, intersectsStrategy)
+	return intersectsStrategy.result
+}*/
+
 /**
  *  Returns true if the specified <code>SparseBitSet</code> has any bits set to
  *  <code>true</code> that are also set to <code>true</code> in this
@@ -830,6 +852,316 @@ func (this *BitSet) NextSetBit(i int32) int32 {
 	} else {
 		return (((w1 << SHIFT1) + (w2 << SHIFT2) + w3) << SHIFT3) + int32(bits.TrailingZeros(uint(word)))
 	}
+}
+
+/**
+ * Returns the index of the nearest bit that is set to {@code false}
+ * that occurs on or before the specified starting index.
+ * If no such bit exists, or if {@code -1} is given as the
+ * starting index, then {@code -1} is returned.
+ *
+ * @param  i the index to start checking from (inclusive)
+ * @return the index of the previous clear bit, or {@code -1} if there
+ *         is no such bit
+ * @throws IndexOutOfBoundsException if the specified index is less
+ *         than {@code -1}
+ * @since  1.2
+ * @see java.util.BitSet#previousClearBit
+ */
+func (this *BitSet) PreviousClearBit(i int32) int32 {
+	if i < 0 {
+		panic(fmt.Sprintf("IndexOutOfBoundsException(i=%v)", i))
+	}
+
+	bits := this.bits
+	aSize := int32(len(this.bits) - 1)
+
+	w := i >> SHIFT3
+	w3 := w & MASK3
+	w2 := (w >> SHIFT2) & MASK2
+	w1 := w >> SHIFT1
+	if w1 > aSize {
+		return i
+	}
+
+	if aSize < w1 {
+		w1 = aSize
+	}
+	w4 := i % LENGTH4
+
+	word := wordType(0)
+	var a2 b2DimType
+	var a3 b1DimType
+
+	for ; w1 >= 0; w1-- {
+		if a2 = bits[w1]; a2 == nil {
+			return (((w1 << SHIFT1) + (w2 << SHIFT2) + w3) << SHIFT3) + w4
+		}
+		for ; w2 >= 0; w2-- {
+			if a3 = a2[w2]; a3 == nil {
+				return (((w1 << SHIFT1) + (w2 << SHIFT2) + w3) << SHIFT3) + w4
+			}
+			for ; w3 >= 0; w3-- {
+				if word = a3[w3]; word == 0 {
+					return (((w1 << SHIFT1) + (w2 << SHIFT2) + w3) << SHIFT3) + w4
+				}
+				for bitIdx := w4; bitIdx >= 0; bitIdx-- {
+					if t := word & (1 << uint(bitIdx)); t == 0 {
+						return (((w1 << SHIFT1) + (w2 << SHIFT2) + w3) << SHIFT3) + bitIdx
+					}
+				}
+				w4 = LENGTH4_SIZE
+			}
+			w3 = LENGTH3_SIZE
+		}
+		w2 = LENGTH2_SIZE
+	}
+	return -1
+}
+
+/**
+ * Returns the index of the nearest bit that is set to {@code true}
+ * that occurs on or before the specified starting index.
+ * If no such bit exists, or if {@code -1} is given as the
+ * starting index, then {@code -1} is returned.
+ *
+ * @param  i the index to start checking from (inclusive)
+ * @return the index of the previous set bit, or {@code -1} if there
+ *         is no such bit
+ * @throws IndexOutOfBoundsException if the specified index is less
+ *         than {@code -1}
+ * @since  1.2
+ * @see java.util.BitSet#previousSetBit
+ */
+
+func (this *BitSet) PreviousSetBit(i int32) int32 {
+	if i < 0 {
+		panic(fmt.Sprintf("IndexOutOfBoundsException(i=%v)", i))
+	}
+	bits := this.bits
+	aSize := int32(len(this.bits) - 1)
+
+	/*  This is the word from which the search begins. */
+	w := i >> SHIFT3
+	w1 := w >> SHIFT1
+	var w2, w3, w4 int32
+	/*  But if its off the end of the array, start from the very end. */
+	if w1 > aSize {
+		w1 = aSize
+		w2 = LENGTH2_SIZE
+		w3 = LENGTH3_SIZE
+		w4 = LENGTH4_SIZE
+	} else {
+		w2 = (w >> SHIFT2) & MASK2
+		w3 = w & MASK3
+		w4 = i % LENGTH4
+	}
+	word := wordType(0)
+	var a2 b2DimType
+	var a3 b1DimType
+
+	for ; w1 >= 0; w1-- {
+		if a2 = bits[w1]; a2 != nil {
+			for ; w2 >= 0; w2-- {
+				if a3 = a2[w2]; a3 != nil {
+					for ; w3 >= 0; w3-- {
+						if word = a3[w3]; word != 0 {
+							for bitIdx := w4; bitIdx >= 0; bitIdx-- {
+								if t := word & (1 << uint(bitIdx)); t != 0 {
+									return (((w1 << SHIFT1) + (w2 << SHIFT2) + w3) << SHIFT3) + bitIdx
+								}
+							}
+						}
+						w4 = LENGTH4_SIZE
+					}
+				}
+				w3 = LENGTH3_SIZE
+				w4 = LENGTH4_SIZE
+			}
+		}
+		w2 = LENGTH2_SIZE
+		w3 = LENGTH3_SIZE
+		w4 = LENGTH4_SIZE
+	}
+	return -1
+}
+
+/**
+ *  Performs a logical <b>OR</b> of the addressed target bit with the
+ *  argument value. This bit set is modified so that the addressed bit has the
+ *  value <code>true</code> if and only if it both initially had the value
+ *  <code>true</code> or the argument value is <code>true</code>.
+ *
+ * @param       i a bit index
+ * @param       value a boolean value to OR with that bit
+ * @exception   IndexOutOfBoundsException if the specified index is negative
+ *              or equal to Integer.MAX_VALUE
+ * @since       1.6
+ */
+//public void or(int i, boolean value)
+func (this *BitSet) OrBit(i int32, value bool) {
+	if (i + 1) < 1 {
+		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
+	}
+	if value {
+		this.Set(i)
+	}
+}
+
+/**
+ *  Performs a logical <b>OR</b> of the addressed target bit with the
+ *  argument value within the given range. This bit set is modified so that
+ *  within the range a bit in it has the value <code>true</code> if and only if
+ *  it either already had the value <code>true</code> or the corresponding bit
+ *  in the bit set argument has the value <code>true</code>. Outside the range
+ *  this set is not changed.
+ *
+ * @param       i index of the first bit to be included in the operation
+ * @param       j index after the last bit to included in the operation
+ * @param       b the SparseBitSet with which to perform the <b>OR</b>
+ *              operation with this SparseBitSet
+ * @exception   IndexOutOfBoundsException if <code>i</code> is negative or
+ *              equal to Integer.MAX_VALUE, or <code>j</code> is negative,
+ *              or <code>i</code> is larger than <code>j</code>
+ * @since       1.6
+ */
+//public void or(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
+func (this *BitSet) OrRangeBitSet(i, j int32, b *BitSet) {
+	this.setScanner(i, j, b, orStrategy)
+}
+
+/**
+ *  Performs a logical <b>OR</b> of this bit set with the bit set argument.
+ *  This bit set is modified so that a bit in it has the value <code>true</code>
+ *  if and only if it either already had the value <code>true</code> or the
+ *  corresponding bit in the bit set argument has the value <code>true</code>.
+ *
+ * @param       b the SparseBitSet with which to perform the <b>OR</b>
+ *              operation with this SparseBitSet
+ * @since       1.6
+ */
+//public void or(SparseBitSet b){
+func (this *BitSet) OrBitSet(b *BitSet) {
+	this.setScanner(0, b.bitsLength, b, orStrategy)
+}
+
+/**
+ *  Performs a logical <b>OR</b> of the two given <code>SparseBitSet</code>s.
+ *  The returned <code>SparseBitSet</code> is created so that a bit in it has
+ *  the value <code>true</code> if and only if it either had the value
+ *  <code>true</code> in the set given by the first arguemetn or had the value
+ *  <code>true</code> in the second argument, otherwise <code>false</code>.
+ *
+ * @param       a a SparseBitSet
+ * @param       b another SparseBitSet
+ * @return      new SparseBitSet representing the <b>OR</b> of the two sets
+ * @since       1.6
+ */
+//public static SparseBitSet or(SparseBitSet a, SparseBitSet b) {
+func Or(a, b *BitSet) *BitSet {
+	result := a.clone()
+	result.OrBitSet(b)
+	return result
+}
+
+/**
+ *  Performs a logical <b>XOR</b> of the addressed target bit with the
+ *  argument value. This bit set is modified so that the addressed bit has the
+ *  value <code>true</code> if and only one of the following statements holds:
+ *  <ul>
+ *  <li>The addressed bit initially had the value <code>true</code>, and the
+ *      value of the argument is <code>false</code>.
+ *  <li>The bit initially had the value <code>false</code>, and the
+ *      value of the argument is <code>true</code>.
+ * </ul>
+ *
+ * @param       i a bit index
+ * @param       value a boolean value to <b>XOR</b> with that bit
+ * @exception   java.lang.IndexOutOfBoundsException if the specified index
+ *              is negative
+ *              or equal to Integer.MAX_VALUE
+ * @since       1.6
+ */
+//public void xor(int i, boolean value) {
+func (this *BitSet) XorBit(i int32, value bool) {
+	if (i + 1) < 1 {
+		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
+	}
+	if value {
+		this.FlipBit(i)
+	}
+}
+
+/**
+ *  Performs a logical <b>XOR</b> of this bit set with the bit set argument
+ *  within the given range. This resulting bit set is computed so that a bit
+ *  within the range in it has the value <code>true</code> if and only if one
+ *  of the following statements holds:
+ *  <ul>
+ *  <li>The bit initially had the value <code>true</code>, and the
+ *      corresponding bit in the argument set has the value <code>false</code>.
+ *  <li>The bit initially had the value <code>false</code>, and the
+ *      corresponding bit in the argument set has the value <code>true</code>.
+ * </ul>
+ *  Outside the range this set is not changed.
+ *
+ * @param       i index of the first bit to be included in the operation
+ * @param       j index after the last bit to included in the operation
+ * @param       b the SparseBitSet with which to perform the <b>XOR</b>
+ *              operation with this SparseBitSet
+ * @exception   IndexOutOfBoundsException if <code>i</code> is negative or
+ *              equal to Integer.MAX_VALUE, or <code>j</code> is negative,
+ *              or <code>i</code> is larger than <code>j</code>
+ * @since       1.6
+ */
+//public void xor(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException{
+func (this *BitSet) XorRangeBitSet(i, j int32, b *BitSet) {
+	this.setScanner(i, j, b, xorStrategy)
+}
+
+/**
+ *  Performs a logical <b>XOR</b> of this bit set with the bit set argument.
+ *  This resulting bit set is computed so that a bit in it has the value
+ *  <code>true</code> if and only if one of the following statements holds:
+ *  <ul>
+ *  <li>The bit initially had the value <code>true</code>, and the
+ *      corresponding bit in the argument set has the value <code>false</code>.
+ *  <li>The bit initially had the value <code>false</code>, and the
+ *      corresponding bit in the argument set has the value <code>true</code>.
+ * </ul>
+ *
+ * @param       b the SparseBitSet with which to perform the <b>XOR</b>
+ *              operation with thisSparseBitSet
+ * @since       1.6
+ */
+//public void xor(SparseBitSet b) {
+
+func (this *BitSet) XorBitSet(b *BitSet) {
+	this.setScanner(0, b.bitsLength, b, xorStrategy)
+}
+
+/**
+ * Performs a logical <b>XOR</b> of the two given <code>SparseBitSet</code>s.
+ *  The resulting bit set is created so that a bit in it has the value
+ *  <code>true</code> if and only if one of the following statements holds:
+ *  <ul>
+ *  <li>A bit in the first argument has the value <code>true</code>, and the
+ *      corresponding bit in the second argument has the value
+ *      <code>false</code>.</li>
+ *  <li>A bit in the first argument has the value <code>false</code>, and the
+ *      corresponding bit in the second argument has the value
+ *      <code>true</code>.</li></ul>
+ *
+ * @param       a a SparseBitSet
+ * @param       b another SparseBitSet
+ * @return      a new SparseBitSet representing the <b>XOR</b> of the two sets
+ * @since       1.6
+ */
+//public static SparseBitSet xor(SparseBitSet a, SparseBitSet b){
+func Xor(a, b *BitSet) *BitSet {
+	result := a.clone()
+	result.XorBitSet(b)
+	return result
 }
 
 /**
