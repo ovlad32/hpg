@@ -288,6 +288,10 @@ func newWithSizeAndCompactionCount(capacity int32, compactionCount int32) *BitSe
 	return result
 }
 
+func remainderOf64(a int32) uint {
+	return uint(a % 64)
+}
+
 /**
  *  Performs a logical <b>AND</b> of the addressed target bit with the argument
  *  value. This bit set is modified so that the addressed bit has the value
@@ -494,8 +498,8 @@ func (this *BitSet) FlipBit(i int32) {
 			a2[w2] = a3
 		}
 	}
-	a3[(w & MASK3)] = a3[(w&MASK3)] ^ wordType(bits.RotateLeft(uint(1), int(i))) //Flip the designated bit
-	this.cache.hash = 0                                                          //  Invalidate size, etc., values
+	a3[(w & MASK3)] = a3[(w&MASK3)] ^ wordType(uint(1)<<remainderOf64(i)) //Flip the designated bit
+	this.cache.hash = 0                                                   //  Invalidate size, etc., values
 }
 
 /**
@@ -550,7 +554,7 @@ func (this *BitSet) GetBit(i int32) bool {
 		if a2 != nil {
 			a3 := a2[(w>>SHIFT2)&MASK2]
 			if a3 != nil {
-				result := a3[(w&MASK3)] & (wordType(bits.RotateLeft(uint(1), int(i))))
+				result := a3[(w&MASK3)] & (wordType(uint(1) << remainderOf64(i)))
 				return result != 0
 			}
 		}
@@ -631,10 +635,10 @@ func (this *BitSet) GetBitSetFromRange(i, j int32) *BitSet {
  * @since       1.6
  */
 //public boolean intersects(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException {
-/*func (this *BitSet) IntersectsRangeBitSet(i, j int32, b *BitSet) {
+func (this *BitSet) IntersectsRangeBitSet(i, j int32, b *BitSet) bool {
 	this.setScanner(i, j, b, intersectsStrategy)
 	return intersectsStrategy.result
-}*/
+}
 
 /**
  *  Returns true if the specified <code>SparseBitSet</code> has any bits set to
@@ -646,11 +650,15 @@ func (this *BitSet) GetBitSetFromRange(i, j int32) *BitSet {
  *              specified SparseBitSet
  * @since       1.6
  */
-/*public boolean intersects(SparseBitSet b)
- {
-	 setScanner(0, Math.max(bitsLength, b.bitsLength), b, intersectsStrategy);
-	 return intersectsStrategy.result;
- } */
+// public boolean intersects(SparseBitSet b)
+func (this *BitSet) IntersectsBitSet(b *BitSet) bool {
+	bmax := this.bitsLength
+	if b.bitsLength > bmax {
+		bmax = b.bitsLength
+	}
+	this.setScanner(0, bmax, b, intersectsStrategy)
+	return intersectsStrategy.result
+}
 
 /**
  *  Returns true if this <code>SparseBitSet</code> contains no bits that are
@@ -719,7 +727,7 @@ func (this *BitSet) NextClearBit(i int32) int32 {
 	w2 := (w >> SHIFT2) & MASK2
 	w1 := w >> SHIFT1
 
-	nword := wordType(^int64(0) << uint(i))
+	nword := wordType(^uint64(0) << remainderOf64(i))
 	aLength := int32(len(this.bits))
 
 	/*  Is the next clear bit in the same word at the nominated beginning bit
@@ -729,7 +737,7 @@ func (this *BitSet) NextClearBit(i int32) int32 {
 	if w1 < aLength {
 		if a2 := this.bits[w1]; a2 != nil {
 			if a3 := a2[w2]; a3 != nil {
-				if nword = ^a3[w3] & wordType(int64(0)<<uint(i)); nword == 0 {
+				if nword = ^a3[w3] & wordType(^uint64(0)<<remainderOf64(i)); nword == 0 {
 					w++
 					w3 = w & MASK3
 					w2 = (w >> SHIFT2) & MASK2
@@ -819,7 +827,7 @@ func (this *BitSet) NextSetBit(i int32) int32 {
 		result := true
 		if a2 != nil {
 			if a3 = a2[w2]; a3 != nil {
-				word = a3[w3] & wordType(^int64(0)<<uint(i))
+				word = a3[w3] & wordType(^uint(0)<<remainderOf64(i))
 				result = word == 0
 			}
 		}
@@ -967,7 +975,7 @@ func (this *BitSet) PreviousSetBit(i int32) int32 {
 					for ; w3 >= 0; w3-- {
 						if word = a3[w3]; word != 0 {
 							for bitIdx := w4; bitIdx >= 0; bitIdx-- {
-								if t := word & (1 << uint(bitIdx)); t != 0 {
+								if t := word & (1 << remainderOf64(bitIdx)); t != 0 {
 									return (((w1 << SHIFT1) + (w2 << SHIFT2) + w3) << SHIFT3) + bitIdx
 								}
 							}
@@ -1173,7 +1181,7 @@ func Xor(a, b *BitSet) *BitSet {
  * @since       1.6
  */
 func (this *BitSet) Set(i int32) {
-	if (i + 1) < 1 {
+	if i < 0 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException(i=%v)", i))
 	}
 	w := i >> SHIFT3
@@ -1194,7 +1202,7 @@ func (this *BitSet) Set(i int32) {
 		a3 = make(b1DimType, LENGTH3)
 		a2[w2] = a3
 	}
-	a3[(w & MASK3)] |= wordType(bits.RotateLeft(uint(1), int(i)))
+	a3[(w & MASK3)] |= wordType(uint(1) << remainderOf64(i))
 	this.cache.hash = 0 //Invalidate size, etc., scan
 }
 
@@ -1277,8 +1285,8 @@ func (this *BitSet) Clear(i int32) {
 	if a3 == nil {
 		return
 	}
-	a3[(w & MASK3)] &= ^wordType(int64(1) << uint(i)) //  Clear the indicated bit
-	this.cache.hash = 0                               //  Invalidate size, etc.,
+	a3[(w & MASK3)] &= ^wordType(uint(1) << remainderOf64(i)) //  Clear the indicated bit
+	this.cache.hash = 0                                       //  Invalidate size, etc.,
 }
 
 /**
@@ -1347,7 +1355,7 @@ func (this *BitSet) clone() (result *BitSet) {
 
 func highestOneBit(x int32) (result int32) {
 	l := bits.Len(uint(x))
-	if result == 0 {
+	if l == 0 {
 		return
 	}
 	result = 1 << (uint(l) - 1)
@@ -1524,7 +1532,7 @@ func (this *BitSet) constructorHelper() {
 	this.spare = make(b1DimType, LENGTH3)
 	this.cache = new(cacheType)
 	this.updateStrategy = new(updateStrategyType)
-	this.updateStrategy.cache = this.cache
+	//this.updateStrategy.cache = this.cache
 }
 
 /**
@@ -1583,13 +1591,13 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 	to be processed in the bit set. */
 	u := int32(i) >> SHIFT3
 	//final long um = ~0L << i;
-	um := wordType(int64(^0) << uint(i))
+	um := wordType(^uint(0) << remainderOf64(i))
 
 	/*  Index of the final word, and mask for the final word,
 	to be processed in the bit set. */
 	v := int32((j - 1)) >> SHIFT3
 	// final long vm = ~0L >>> -j;
-	vm := ^wordType(int64(^0) << uint(j))
+	vm := ^wordType(^uint(0) << remainderOf64(j))
 
 	/*  Set up the two bit arrays (if the second exists), and their
 	corresponding lengths (if any). */
@@ -1599,7 +1607,7 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 	var b1 b3DimType
 	var bLength1 int32 = 0
 
-	if b1 != nil {
+	if b != nil {
 		b1 = b.bits
 		bLength1 = int32(len(b.bits))
 	}
@@ -1800,7 +1808,7 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 	} /* end while( i < j ) */
 
 	/*  Do whatever the strategy needs in order to finish. */
-	op.finish(a2CountLocal, a3CountLocal)
+	op.finish(this.cache, a2CountLocal, a3CountLocal)
 }
 
 /**
@@ -1992,7 +2000,7 @@ func (st StatisticsType) String() string {
 	case Compaction_count_value:
 		return "Compaction-count-value"
 	default:
-		panic(fmt.Sprintf("Unknown statistics value %v", st))
+		panic(fmt.Sprintf("Unknown statistics value %d", st))
 	}
 }
 
@@ -2068,7 +2076,7 @@ type strateger interface {
 	start(*BitSet) bool
 	word(base, u3 int32, a3, b3 b1DimType, mask wordType) bool
 	block(base, u3, v3 int32, a3, b3 b1DimType) bool
-	finish(a2Count, a3Count int32)
+	finish(c *cacheType, a2Count, a3Count int32)
 }
 
 /** If the operation requires that when matching level2 areas or level3
@@ -2161,7 +2169,7 @@ func (st andStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero bo
 	return
 }
 
-func (st andStrategyType) finish(a2Count, a3Count int32) {}
+func (st andStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -2209,7 +2217,7 @@ func (st andNotStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero
 	}
 	return
 }
-func (st andNotStrategyType) finish(a2Count, a3Count int32) {}
+func (st andNotStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -2243,7 +2251,7 @@ func (st clearStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero 
 	}
 	return true
 }
-func (st clearStrategyType) finish(a2Count, a3Count int32) {}
+func (st clearStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -2277,7 +2285,7 @@ func (st copyStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero b
 	}
 	return
 }
-func (st copyStrategyType) finish(a2Count, a3Count int32) {}
+func (st copyStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -2325,7 +2333,7 @@ func (st *equalsStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZer
 	return
 }
 
-func (st equalsStrategyType) finish(a2Count, a3Count int32) {}
+func (st equalsStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -2359,7 +2367,7 @@ func (st flipStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero b
 	}
 	return
 }
-func (st flipStrategyType) finish(a2Count, a3Count int32) {}
+func (st flipStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -2408,7 +2416,7 @@ func (st *intersectsStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (i
 	}
 	return
 }
-func (st intersectsStrategyType) finish(a2Count, a3Count int32) {}
+func (st intersectsStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 /**
  *  Or of two sets. Where the <i>a</i> set is one, it remains one. Similarly,
@@ -2449,7 +2457,7 @@ func (st orStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero boo
 	}
 	return
 }
-func (st orStrategyType) finish(a2Count, a3Count int32) {}
+func (st orStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -2485,7 +2493,7 @@ func (st setStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero bo
 	isZero = false
 	return
 }
-func (st setStrategyType) finish(a2Count, a3Count int32) {}
+func (st setStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -2551,7 +2559,7 @@ type updateStrategyType struct {
 	 */
 	cardinality int32
 
-	cache *cacheType
+	//cache *cacheType
 }
 
 func (st updateStrategyType) properties() int32 {
@@ -2569,7 +2577,7 @@ func (st *updateStrategyType) start(b *BitSet) bool {
 	return false
 }
 
-func (st updateStrategyType) word(base, u3 int32, a3, b3 b1DimType, mask wordType) bool {
+func (st *updateStrategyType) word(base, u3 int32, a3, b3 b1DimType, mask wordType) bool {
 	word := a3[u3]
 	word1 := word & mask
 	if word1 != 0 {
@@ -2586,22 +2594,23 @@ func (st *updateStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZer
 			st.compute(base+w3, word)
 		}
 	}
-	isZero = false
-	return
+	return isZero
 }
 
-func (st *updateStrategyType) finish(a2Count, a3Count int32) {
-	st.cache.a2Count = a2Count
-	st.cache.a3Count = a3Count
-	st.cache.count = st.count
-	st.cache.cardinality = st.cardinality
-	st.cache.length = (st.wMax+1)*LENGTH4 - int32(bits.LeadingZeros(uint(st.wordMax)))
-	st.cache.size = st.cache.length - st.wMin*LENGTH4 - int32(bits.LeadingZeros(uint(st.wordMin)))
-	st.cache.hash = ((st.hash >> INTEGER_SIZE) ^ st.hash)
+func (st *updateStrategyType) finish(c *cacheType, a2Count, a3Count int32) {
+	c.a2Count = a2Count
+	c.a3Count = a3Count
+	c.count = st.count
+	c.cardinality = st.cardinality
+	c.length = (st.wMax+1)*LENGTH4 - int32(bits.LeadingZeros(uint(st.wordMax)))
+	c.size = c.length - st.wMin*LENGTH4 - int32(bits.LeadingZeros(uint(st.wordMin)))
+	c.hash = ((st.hash >> INTEGER_SIZE) ^ st.hash)
 }
 
 func (st *updateStrategyType) compute(index int32, word wordType) {
 	/*  Count the number of actual words being used. */
+	fmt.Printf("idx=%v\n", index)
+	fmt.Printf("word=%v\n", word)
 	st.count++
 	/*  Continue to accumulate the hash value of the set. */
 	st.hash = st.hash ^ (uint64(word) * uint64(index+1))
@@ -2617,6 +2626,7 @@ func (st *updateStrategyType) compute(index int32, word wordType) {
 	st.wordMax = word
 	/*  Count the actual bits, so as to get the cardinality of the set. */
 	st.cardinality = st.cardinality + int32(bits.OnesCount(uint(word)))
+	fmt.Printf("cnt=%v, st.cardinality=%v \n", bits.OnesCount(uint(word)), st.cardinality)
 }
 
 //-----------------------------------------------------------------------------
@@ -2650,4 +2660,4 @@ func (st xorStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero bo
 	isZero = false
 	return
 }
-func (st xorStrategyType) finish(a2Count, a3Count int32) {}
+func (st xorStrategyType) finish(c *cacheType, a2Count, a3Count int32) {}

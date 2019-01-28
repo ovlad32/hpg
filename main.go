@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,15 +20,23 @@ import (
 //var app *fx.App
 func sparseTest() {
 	sb := sparse.New()
-	sb.SetBit(0, true)
+	/*sb.SetBit(0, true)
 	sb.SetBit(3, true)
 	sb.SetBit(31, true)
 	sb.SetBit(332, true)
 	sb.SetBit(337, true)
 	sb.SetBit(437, true)
 	sb.SetBit(438, true)
+	sb.SetBit(1438, true)
+	sb.SetBit(100438, true)
+	*/
+	sb.SetBit(1000100438, true)
+	sb.SetBit(int32(math.MaxInt8), true)
+	sb.SetBit(int32(math.MaxInt32)-1, true)
+	sb.SetBit(int32(math.MaxInt32)-2, true)
+
 	fmt.Println(sb.Cardinality())
-	for i := int32(0); i >= 0; i = sb.NextSetBit(i + 1) {
+	for i := sb.NextSetBit(0); i >= 0; i = sb.NextSetBit(i + 1) {
 		fmt.Printf(">%v\n", i)
 	}
 }

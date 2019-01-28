@@ -152,7 +152,7 @@ J:public boolean equals(Object obj)
 J:public void flip(int i)
 G:func (this *BitSet) FlipBit(i int32) 
 J:public void flip(int i, int j) throws IndexOutOfBoundsException
-func (this *BitSet) FlipRange(i, j int32) 
+G:func (this *BitSet) FlipRange(i, j int32) 
 
 J:public boolean get(int i)
 G::func (this *BitSet) GetBit(i int32) bool
@@ -162,7 +162,9 @@ G:func (this *BitSet) GetBitSetFromRange(i, j int32) *BitSet
 
 
 J:public boolean intersects(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
+G:func (this *BitSet) IntersectsRangeBitSet(i, j int32, b *BitSet) bool 
 J:public boolean intersects(SparseBitSet b)
+G:func (this *BitSet) IntersectsBitSet(b *BitSet) bool {
 
 J:public boolean isEmpty()
 G::func (this *BitSet) isEmpty() bool
