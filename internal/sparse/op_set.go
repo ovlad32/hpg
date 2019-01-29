@@ -1,3 +1,5 @@
+package sparse
+
 import "fmt"
 
 /**
