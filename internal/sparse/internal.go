@@ -401,7 +401,7 @@ func (this *BitSet) setScanner(i, j int32, b *BitSet, op strateger) {
 	} /* end while( i < j ) */
 
 	/*  Do whatever the strategy needs in order to finish. */
-	op.finish(this.cache, a2CountLocal, a3CountLocal)
+	op.finish(a2CountLocal, a3CountLocal)
 }
 
 /**
