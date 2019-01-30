@@ -10,32 +10,32 @@ import "fmt"
  *              or equal to Integer.MAX_VALUE
  * @since       1.6
  */
-func (this *BitSet) FlipBit(i int32) {
+func (bs *BitSet) FlipBit(i int32) {
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
 	}
-	w := i >> SHIFT3
-	w1 := w >> SHIFT1
-	w2 := (w >> SHIFT2) & MASK2
+	w := i >> cShift3
+	w1 := w >> cShift1
+	w2 := (w >> cShift2) & cMask2
 
-	if i >= this.bitsLength {
-		this.resize(i)
+	if i >= bs.bitsLength {
+		bs.resize(i)
 	}
 
 	var a2 b2DimType
 	var a3 b1DimType
-	if a2 = this.bits[w1]; a2 == nil {
-		a2 = make(b2DimType, LENGTH2)
-		a3 = make(b1DimType, LENGTH3)
+	if a2 = bs.bits[w1]; a2 == nil {
+		a2 = make(b2DimType, cLength2)
+		a3 = make(b1DimType, cLength3)
 		a2[w2] = a3
 	} else {
 		if a3 = a2[w2]; a3 == nil {
-			a3 = make(b1DimType, LENGTH3)
+			a3 = make(b1DimType, cLength3)
 			a2[w2] = a3
 		}
 	}
-	a3[(w & MASK3)] = a3[(w&MASK3)] ^ wordType(uint(1)<<remainderOf64(i)) //Flip the designated bit
-	this.cache.hash = 0                                                   //  Invalidate size, etc., values
+	a3[(w & cMask3)] = a3[(w&cMask3)] ^ wordType(uint(1)<<remainderOf64(i)) //Flip the designated bit
+	bs.cache.hash = 0                                                       //  Invalidate size, etc., values
 }
 
 /**
@@ -50,6 +50,6 @@ func (this *BitSet) FlipBit(i int32) {
  *              <code>i</code> is larger than <code>j</code>
  * @since       1.6
  */
-func (this *BitSet) FlipRange(i, j int32) {
-	this.setScanner(i, j, nil, flipStrategy)
+func (bs *BitSet) FlipRange(i, j int32) {
+	bs.setScanner(i, j, nil, flipStrategy)
 }

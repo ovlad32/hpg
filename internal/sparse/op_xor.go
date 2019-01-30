@@ -2,7 +2,7 @@ package sparse
 
 import "fmt"
 
-/**
+/*XorBit ...
  *  Performs a logical <b>XOR</b> of the addressed target bit with the
  *  argument value. This bit set is modified so that the addressed bit has the
  *  value <code>true</code> if and only one of the following statements holds:
@@ -21,16 +21,16 @@ import "fmt"
  * @since       1.6
  */
 //public void xor(int i, boolean value) {
-func (this *BitSet) XorBit(i int32, value bool) {
+func (bs *BitSet) XorBit(i int32, value bool) {
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
 	}
 	if value {
-		this.FlipBit(i)
+		bs.FlipBit(i)
 	}
 }
 
-/**
+/*XorRangeBitSet ...
  *  Performs a logical <b>XOR</b> of this bit set with the bit set argument
  *  within the given range. This resulting bit set is computed so that a bit
  *  within the range in it has the value <code>true</code> if and only if one
@@ -53,11 +53,11 @@ func (this *BitSet) XorBit(i int32, value bool) {
  * @since       1.6
  */
 //public void xor(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException{
-func (this *BitSet) XorRangeBitSet(i, j int32, b *BitSet) {
-	this.setScanner(i, j, b, xorStrategy)
+func (bs *BitSet) XorRangeBitSet(i, j int32, b *BitSet) {
+	bs.setScanner(i, j, b, xorStrategy)
 }
 
-/**
+/*XorBitSet ...
  *  Performs a logical <b>XOR</b> of this bit set with the bit set argument.
  *  This resulting bit set is computed so that a bit in it has the value
  *  <code>true</code> if and only if one of the following statements holds:
@@ -73,12 +73,11 @@ func (this *BitSet) XorRangeBitSet(i, j int32, b *BitSet) {
  * @since       1.6
  */
 //public void xor(SparseBitSet b) {
-
-func (this *BitSet) XorBitSet(b *BitSet) {
-	this.setScanner(0, b.bitsLength, b, xorStrategy)
+func (bs *BitSet) XorBitSet(b *BitSet) {
+	bs.setScanner(0, b.bitsLength, b, xorStrategy)
 }
 
-/**
+/*Xor ...
  * Performs a logical <b>XOR</b> of the two given <code>SparseBitSet</code>s.
  *  The resulting bit set is created so that a bit in it has the value
  *  <code>true</code> if and only if one of the following statements holds:

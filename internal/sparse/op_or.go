@@ -15,12 +15,12 @@ import "fmt"
  * @since       1.6
  */
 //public void or(int i, boolean value)
-func (this *BitSet) OrBit(i int32, value bool) {
+func (bs *BitSet) OrBit(i int32, value bool) {
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
 	}
 	if value {
-		this.Set(i)
+		bs.Set(i)
 	}
 }
 
@@ -42,8 +42,8 @@ func (this *BitSet) OrBit(i int32, value bool) {
  * @since       1.6
  */
 //public void or(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
-func (this *BitSet) OrRangeBitSet(i, j int32, b *BitSet) {
-	this.setScanner(i, j, b, orStrategy)
+func (bs *BitSet) OrRangeBitSet(i, j int32, b *BitSet) {
+	bs.setScanner(i, j, b, orStrategy)
 }
 
 /**
@@ -57,8 +57,8 @@ func (this *BitSet) OrRangeBitSet(i, j int32, b *BitSet) {
  * @since       1.6
  */
 //public void or(SparseBitSet b){
-func (this *BitSet) OrBitSet(b *BitSet) {
-	this.setScanner(0, b.bitsLength, b, orStrategy)
+func (bs *BitSet) OrBitSet(b *BitSet) {
+	bs.setScanner(0, b.bitsLength, b, orStrategy)
 }
 
 /**

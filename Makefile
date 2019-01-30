@@ -10,7 +10,7 @@ EXECUTABLE = $(BINARY_WINDOWS)
 
 all: test build
 build: 
-		$(GOBUILD) -o $(EXECUTABLE) -v
+		$(GOBUILD) -o -gcflags="-m" $(EXECUTABLE) -v
 test: 
 		$(GOTEST) -v . 
 clean: 
@@ -18,7 +18,7 @@ clean:
 		#rm -f $(BINARY_WINDOWS)
 		#rm -f $(BINARY_UNIX)
 run:
-		$(GOBUILD) -o $(EXECUTABLE) -v .
+		$(GOBUILD)  -gcflags="-m" -o $(EXECUTABLE) -v .
 		./$(EXECUTABLE)
 deps:
 		$(GOGET) github.com/markbates/goth

@@ -11,7 +11,7 @@ import (
 	"os/signal"
 
 	"github.com/gorilla/mux"
-	"github.com/ovlad32/hpg/sparse"
+	"github.com/ovlad32/hpg/internal/sparse"
 	"github.com/ovlad32/hpg/todo"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -40,6 +40,7 @@ func sparseTest() {
 		fmt.Printf(">%v\n", i)
 	}
 }
+
 func main() {
 	sparseTest()
 	return

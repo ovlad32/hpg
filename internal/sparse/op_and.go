@@ -15,12 +15,14 @@ import "fmt"
  * @since       1.6
  */
 //public void and(int i, boolean value) throws IndexOutOfBoundsException
-func (this *BitSet) AndBit(i int32, value bool) {
+
+//AndBit ...
+func (bs *BitSet) AndBit(i int32, value bool) {
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException: i=%v", i))
 	}
 	if !value {
-		this.Clear(i)
+		bs.Clear(i)
 	}
 }
 
@@ -41,8 +43,10 @@ func (this *BitSet) AndBit(i int32, value bool) {
  * @since       1.6
  */
 //public void and(int i, int j, SparseBitSet b) throws IndexOutOfBoundsException
-func (this *BitSet) AndRangeBitSet(i, j int32, b *BitSet) {
-	this.setScanner(i, j, b, andStrategyType{})
+
+// AndRangeBitSet ...
+func (bs *BitSet) AndRangeBitSet(i, j int32, b *BitSet) {
+	bs.setScanner(i, j, b, andStrategyType{})
 }
 
 /**
@@ -56,20 +60,20 @@ func (this *BitSet) AndRangeBitSet(i, j int32, b *BitSet) {
  * @since       1.6
  */
 //    public void and(SparseBitSet b)
-func (this *BitSet) AndBitSet(b *BitSet) {
+func (bs *BitSet) AndBitSet(b *BitSet) {
 	{
-		bmin := len(this.bits)
+		bmin := len(bs.bits)
 		if len(b.bits) < bmin {
 			bmin = len(b.bits)
 		}
-		this.nullify(int32(bmin)) // Optimisation
+		bs.nullify(int32(bmin)) // Optimisation
 	}
 	{
-		bmin := this.bitsLength
+		bmin := bs.bitsLength
 		if b.bitsLength < bmin {
 			bmin = b.bitsLength
 		}
-		this.setScanner(0, bmin, b, andStrategy)
+		bs.setScanner(0, bmin, b, andStrategy)
 	}
 }
 

@@ -1,7 +1,6 @@
 package sparse
 
 import (
-	"fmt"
 	"math/bits"
 )
 
@@ -67,7 +66,7 @@ var xorStrategy = new(xorStrategyType)
 type andStrategyType struct{}
 
 func (st andStrategyType) properties() int32 {
-	return F_OP_F_EQ_F + F_OP_X_EQ_F + X_OP_F_EQ_F
+	return cFalseOpFalseEqFalse + cValueOpFalseEqFalse + cValueOpFalseEqFalse
 }
 
 func (st andStrategyType) start(b *BitSet) bool {
@@ -91,7 +90,7 @@ func (st andStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero bo
 	return
 }
 
-func (st andStrategyType) finish(a2Count, a3Count int32) {}
+func (st andStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -116,7 +115,7 @@ func (st andStrategyType) finish(a2Count, a3Count int32) {}
 type andNotStrategyType struct{}
 
 func (st andNotStrategyType) properties() int32 {
-	return F_OP_F_EQ_F + F_OP_X_EQ_F + X_OP_F_EQ_X
+	return cFalseOpFalseEqFalse + cFalseOpValueEqFalse + cValueOpFalseEqValue
 }
 
 func (st andNotStrategyType) start(b *BitSet) bool {
@@ -139,7 +138,7 @@ func (st andNotStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero
 	}
 	return
 }
-func (st andNotStrategyType) finish(a2Count, a3Count int32) {}
+func (st andNotStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -153,7 +152,7 @@ func (st andNotStrategyType) finish(a2Count, a3Count int32) {}
 type clearStrategyType struct{}
 
 func (st clearStrategyType) properties() int32 {
-	return F_OP_F_EQ_F + F_OP_X_EQ_F
+	return cFalseOpFalseEqFalse + cFalseOpValueEqFalse
 }
 
 func (st clearStrategyType) start(b *BitSet) bool {
@@ -166,14 +165,14 @@ func (st clearStrategyType) word(base, u3 int32, a3, b3 b1DimType, mask wordType
 }
 
 func (st clearStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero bool) {
-	if u3 != 0 || v3 != LENGTH3 {
+	if u3 != 0 || v3 != cLength3 {
 		for w3 := u3; w3 != v3; w3 = w3 + 1 {
 			a3[w3] = 0
 		}
 	}
 	return true
 }
-func (st clearStrategyType) finish(a2Count, a3Count int32) {}
+func (st clearStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -187,7 +186,7 @@ func (st clearStrategyType) finish(a2Count, a3Count int32) {}
 type copyStrategyType struct{}
 
 func (st copyStrategyType) properties() int32 {
-	return F_OP_F_EQ_F + X_OP_F_EQ_F
+	return cFalseOpFalseEqFalse + cValueOpFalseEqFalse
 }
 
 func (st copyStrategyType) start(b *BitSet) bool {
@@ -207,7 +206,7 @@ func (st copyStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero b
 	}
 	return
 }
-func (st copyStrategyType) finish(a2Count, a3Count int32) {}
+func (st copyStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -222,19 +221,18 @@ func (st copyStrategyType) finish(a2Count, a3Count int32) {}
  *      1| - - <pre>
  */
 type equalsStrategyType struct {
-	bs *BitSet
+	result bool
 }
 
 func (st equalsStrategyType) properties() int32 {
-	return F_OP_F_EQ_F
+	return cFalseOpFalseEqFalse
 }
 
 func (st *equalsStrategyType) start(b *BitSet) bool {
 	if b == nil {
 		panic("b is nil")
 	}
-	st.bs = b
-	st.bs.strategyResult = true
+	st.result = true
 	return false
 	/*  Equals does not change the content of the set, hence hash need
 	    not be reset. */
@@ -242,7 +240,7 @@ func (st *equalsStrategyType) start(b *BitSet) bool {
 
 func (st *equalsStrategyType) word(base, u3 int32, a3, b3 b1DimType, mask wordType) bool {
 	word := a3[u3]
-	st.bs.strategyResult = st.bs.strategyResult && ((word & mask) == (b3[u3] & mask))
+	st.result = st.result && ((word & mask) == (b3[u3] & mask))
 	return word == 0
 }
 
@@ -250,13 +248,13 @@ func (st *equalsStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZer
 	isZero = true
 	for w3 := u3; w3 != v3; w3 = w3 + 1 {
 		word := a3[w3]
-		st.bs.strategyResult = st.bs.strategyResult && word == b3[w3]
+		st.result = st.result && word == b3[w3]
 		isZero = isZero && word == 0
 	}
 	return
 }
 
-func (st equalsStrategyType) finish(a2Count, a3Count int32) {}
+func (st equalsStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -290,7 +288,7 @@ func (st flipStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero b
 	}
 	return
 }
-func (st flipStrategyType) finish(a2Count, a3Count int32) {}
+func (st flipStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -307,19 +305,18 @@ func (st flipStrategyType) finish(a2Count, a3Count int32) {}
  *         1| 1 1 <pre>
  */
 type intersectsStrategyType struct {
-	bs *BitSet
+	result bool
 }
 
 func (st intersectsStrategyType) properties() int32 {
-	return F_OP_F_EQ_F + F_OP_X_EQ_F
+	return cFalseOpFalseEqFalse + cFalseOpValueEqFalse
 }
 
 func (st *intersectsStrategyType) start(b *BitSet) bool {
 	if b == nil {
 		panic("b is nil")
 	}
-	st.bs = b
-	st.bs.strategyResult = false
+	st.result = false
 	return false
 	/*  Intersect does not change the content of the set, hence hash need
 	    not be reset. */
@@ -327,7 +324,7 @@ func (st *intersectsStrategyType) start(b *BitSet) bool {
 
 func (st *intersectsStrategyType) word(base, u3 int32, a3, b3 b1DimType, mask wordType) bool {
 	word := a3[u3]
-	st.bs.strategyResult = st.bs.strategyResult || ((word & b3[u3] & mask) != 0)
+	st.result = st.result || ((word & b3[u3] & mask) != 0)
 	return word == 0
 }
 
@@ -335,12 +332,12 @@ func (st *intersectsStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (i
 	isZero = true
 	for w3 := u3; w3 != v3; w3 = w3 + 1 {
 		word := a3[w3]
-		st.bs.strategyResult = st.bs.strategyResult || ((word & b3[w3]) != 0)
+		st.result = st.result || ((word & b3[w3]) != 0)
 		isZero = isZero && word == 0
 	}
 	return
 }
-func (st intersectsStrategyType) finish(a2Count, a3Count int32) {}
+func (st intersectsStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 /**
  *  Or of two sets. Where the <i>a</i> set is one, it remains one. Similarly,
@@ -360,7 +357,7 @@ func (st intersectsStrategyType) finish(a2Count, a3Count int32) {}
 type orStrategyType struct{}
 
 func (st orStrategyType) properties() int32 {
-	return F_OP_F_EQ_F + X_OP_F_EQ_X
+	return cFalseOpFalseEqFalse + cValueOpFalseEqValue
 }
 
 func (st orStrategyType) start(b *BitSet) bool {
@@ -381,7 +378,7 @@ func (st orStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero boo
 	}
 	return
 }
-func (st orStrategyType) finish(a2Count, a3Count int32) {}
+func (st orStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -417,7 +414,7 @@ func (st setStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero bo
 	isZero = false
 	return
 }
-func (st setStrategyType) finish(a2Count, a3Count int32) {}
+func (st setStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}
 
 //-----------------------------------------------------------------------------
 /**
@@ -432,22 +429,68 @@ func (st setStrategyType) finish(a2Count, a3Count int32) {}
  * @see SparseBitSet#statisticsUpdate()
  */
 type updateStrategyType struct {
-	bs *BitSet
+	/**
+	 *  Working space for find the size and length of the bit set. Holds copy of
+	 *  the first non-empty word in the set.
+	 */
+	wordMin wordType
+	/**
+	 *  Working space for find the size and length of the bit set. Holds a copy
+	 *  of the last non-empty word in the set.
+	 */
+	wordMax wordType
+
+	/**
+	 *  Working space for find the hash value of the bit set. Holds the
+	 *  current state of the computation of the hash value. This value is
+	 *  ultimately transferred to the Cache object.
+	 *
+	 * @see SparseBitSet.Cache
+	 */
+	hash uint64
+	/**
+	 *  Working space for find the size and length of the bit set. Holds the
+	 *  index of the first non-empty word in the set.
+	 */
+	wMin int32
+
+	/**
+	 *  Working space for find the size and length of the bit set. Holds the
+	 *  index of the last non-empty word in the set.
+	 */
+	wMax int32
+
+	/**
+	 *  Working space for keeping count of the number of non-zero words in the
+	 *  bit set. Holds the current state of the computation of the count. This
+	 *  value is ultimately transferred to the Cache object.
+	 *
+	 * @see SparseBitSet.Cache
+	 */
+	count int32
+
+	/**
+	 *  Working space for counting the number of non-zero bits in the bit set.
+	 *  Holds the current state of the computation of the cardinality.This
+	 *  value is ultimately transferred to the Cache object.
+	 *
+	 * @see SparseBitSet.Cache
+	 */
+	cardinality int32
 }
 
 func (st updateStrategyType) properties() int32 {
-	return F_OP_F_EQ_F + F_OP_X_EQ_F
+	return cFalseOpFalseEqFalse + cFalseOpValueEqFalse
 }
 
 func (st *updateStrategyType) start(b *BitSet) bool {
-	st.bs = b
-	st.bs.update.hash = 1234     // Magic number
-	st.bs.update.wMin = -1       // index of first non-zero word
-	st.bs.update.wordMin = 0     // word at that index
-	st.bs.update.wMax = 0        // index of last non-zero word
-	st.bs.update.wordMax = 0     // word at that index
-	st.bs.update.count = 0       // count of non-zero words in whole set
-	st.bs.update.cardinality = 0 // count of non-zero bits in the whole set
+	st.hash = 1234     // Magic number
+	st.wMin = -1       // index of first non-zero word
+	st.wordMin = 0     // word at that index
+	st.wMax = 0        // index of last non-zero word
+	st.wordMax = 0     // word at that index
+	st.count = 0       // count of non-zero words in whole set
+	st.cardinality = 0 // count of non-zero bits in the whole set
 	return false
 }
 
@@ -471,36 +514,33 @@ func (st *updateStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZer
 	return isZero
 }
 
-func (st *updateStrategyType) finish(a2Count, a3Count int32) {
-	st.bs.cache.a2Count = a2Count
-	st.bs.cache.a3Count = a3Count
-	st.bs.cache.count = st.bs.update.count
-	st.bs.cache.cardinality = st.bs.update.cardinality
-	st.bs.cache.length = (st.bs.update.wMax+1)*LENGTH4 - int32(bits.LeadingZeros(uint(st.bs.update.wordMax)))
-	st.bs.cache.size = st.bs.cache.length - st.bs.update.wMin*LENGTH4 - int32(bits.LeadingZeros(uint(st.bs.update.wordMin)))
-	st.bs.cache.hash = ((st.bs.update.hash >> INTEGER_SIZE) ^ st.bs.update.hash)
+func (st *updateStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {
+	cache.a2Count = a2Count
+	cache.a3Count = a3Count
+	cache.count = st.count
+	cache.cardinality = st.cardinality
+	cache.length = (st.wMax+1)*cLength4 - int32(bits.LeadingZeros(uint(st.wordMax)))
+	cache.size = cache.length - st.wMin*cLength4 - int32(bits.LeadingZeros(uint(st.wordMin)))
+	cache.hash = ((st.hash >> cIntegerSize) ^ st.hash)
 }
 
 func (st *updateStrategyType) compute(index int32, word wordType) {
 	/*  Count the number of actual words being used. */
-	fmt.Printf("idx=%v\n", index)
-	fmt.Printf("word=%v\n", word)
-	st.bs.update.count++
+	st.count++
 	/*  Continue to accumulate the hash value of the set. */
-	st.bs.update.hash = st.bs.update.hash ^ (uint64(word) * uint64(index+1))
+	st.hash = st.hash ^ (uint64(word) * uint64(index+1))
 	/*  The first non-zero word contains the first actual bit of the
 	    set. The location of this bit is used to compute the set size. */
-	if st.bs.update.wMin < 0 {
-		st.bs.update.wMin = index
-		st.bs.update.wordMin = word
+	if st.wMin < 0 {
+		st.wMin = index
+		st.wordMin = word
 	}
 	/*  The last non-zero word contains the last actual bit of the set.
 	    The location of this bit is used to compute the set length. */
-	st.bs.update.wMax = index
-	st.bs.update.wordMax = word
+	st.wMax = index
+	st.wordMax = word
 	/*  Count the actual bits, so as to get the cardinality of the set. */
-	st.bs.update.cardinality = st.bs.update.cardinality + int32(bits.OnesCount(uint(word)))
-	fmt.Printf("cnt=%v, st.cardinality=%v \n", bits.OnesCount(uint(word)), st.bs.update.cardinality)
+	st.cardinality = st.cardinality + int32(bits.OnesCount(uint(word)))
 }
 
 //-----------------------------------------------------------------------------
@@ -515,7 +555,7 @@ func (st *updateStrategyType) compute(index int32, word wordType) {
 type xorStrategyType struct{}
 
 func (st xorStrategyType) properties() int32 {
-	return F_OP_F_EQ_F + X_OP_F_EQ_X
+	return cFalseOpFalseEqFalse + cValueOpFalseEqValue
 }
 func (st xorStrategyType) start(b *BitSet) bool {
 	return true
@@ -534,4 +574,4 @@ func (st xorStrategyType) block(base, u3, v3 int32, a3, b3 b1DimType) (isZero bo
 	isZero = false
 	return
 }
-func (st xorStrategyType) finish(a2Count, a3Count int32) {}
+func (st xorStrategyType) finish(cache *cacheType, a2Count, a3Count int32) {}

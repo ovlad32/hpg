@@ -10,27 +10,27 @@ import "fmt"
  *              or equal to Integer.MAX_VALUE.
  * @since       1.6
  */
-func (this *BitSet) Clear(i int32) {
+func (bs *BitSet) Clear(i int32) {
 	/*  In the interests of speed, no check is made here on whether the
 	level3 block goes to all zero. This may be found and corrected
 	in some later operation. */
 	if (i + 1) < 1 {
 		panic(fmt.Sprintf("IndexOutOfBoundsException(i=%v)", i))
 	}
-	if i >= this.bitsLength {
+	if i >= bs.bitsLength {
 		return
 	}
-	w := i >> SHIFT3
-	a2 := this.bits[w>>SHIFT1]
+	w := i >> cShift3
+	a2 := bs.bits[w>>cShift1]
 	if a2 == nil {
 		return
 	}
-	a3 := a2[(w>>SHIFT2)&MASK2]
+	a3 := a2[(w>>cShift2)&cMask2]
 	if a3 == nil {
 		return
 	}
-	a3[(w & MASK3)] &= ^wordType(uint(1) << remainderOf64(i)) //  Clear the indicated bit
-	this.cache.hash = 0                                       //  Invalidate size, etc.,
+	a3[(w & cMask3)] &= ^wordType(uint(1) << remainderOf64(i)) //  Clear the indicated bit
+	bs.cache.hash = 0                                          //  Invalidate size, etc.,
 }
 
 /**
@@ -44,8 +44,8 @@ func (this *BitSet) Clear(i int32) {
  *              or <code>i</code> is larger than <code>j</code>
  * @since       1.6
  */
-func (this *BitSet) ClearRange(i, j int32) {
-	this.setScanner(i, j, nil, clearStrategy)
+func (bs *BitSet) ClearRange(i, j int32) {
+	bs.setScanner(i, j, nil, clearStrategy)
 }
 
 /**
