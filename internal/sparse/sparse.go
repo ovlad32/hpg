@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-type wordType uint64
+type wordType = uint64
 type b3DimType [][][]wordType
 type b2DimType [][]wordType
 type b1DimType []wordType

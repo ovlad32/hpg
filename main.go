@@ -34,11 +34,18 @@ func sparseTest() {
 	sb.SetBit(int32(math.MaxInt8), true)
 	sb.SetBit(int32(math.MaxInt32)-1, true)
 	sb.SetBit(int32(math.MaxInt32)-2, true)
+	{
+		i := int32(0)
+		for ; i < int32(math.MaxInt32); i++ {
+			sb.SetBit(i, true)
+		}
+		fmt.Println(i)
+	}
 
 	fmt.Println(sb.Cardinality())
-	for i := sb.NextSetBit(0); i >= 0; i = sb.NextSetBit(i + 1) {
+	/*for i := sb.NextSetBit(0); i >= 0; i = sb.NextSetBit(i + 1) {
 		fmt.Printf(">%v\n", i)
-	}
+	}*/
 }
 
 func main() {

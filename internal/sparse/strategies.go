@@ -540,7 +540,7 @@ func (st *updateStrategyType) compute(index int32, word wordType) {
 	st.wMax = index
 	st.wordMax = word
 	/*  Count the actual bits, so as to get the cardinality of the set. */
-	st.cardinality = st.cardinality + int32(bits.OnesCount(uint(word)))
+	st.cardinality = st.cardinality + int32(bits.OnesCount64(word))
 }
 
 //-----------------------------------------------------------------------------
