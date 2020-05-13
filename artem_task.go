@@ -5,12 +5,13 @@ import (
 )
 
 var dict = map[string][]string{
-	"A": nil,
-	"B": []string{"A"},
-	"C": []string{"B"},
-	"D": []string{"B", "C"},
-	"E": []string{"D"},
-	"F": []string{"E"},
+	"A":  nil,
+	"B":  []string{"A"},
+	"C":  []string{"B"},
+	"D":  []string{"B", "C"},
+	"E":  []string{"D"},
+	"F":  []string{"E"},
+	"F1": []string{"E"},
 }
 
 func dig_deep(child, seekFor string) (found bool) {
